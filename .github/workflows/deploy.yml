@@ -44,7 +44,7 @@ jobs:
         
         # Project to Port Mapping - CUSTOMIZE THESE PORTS
         declare -A PROJECT_PORTS
-        PROJECT_PORTS["wdi-training-cj.online"]="4007"
+        PROJECT_PORTS["wdi-training-cj.online"]="3001"
         PROJECT_PORTS["wdi-training-tommy-vercetti.online"]="3002"
         PROJECT_PORTS["wdi-training-franklin-clinton.online"]="3003"
         PROJECT_PORTS["wdi-training-trevor-philips.online"]="3004"
