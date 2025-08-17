@@ -29,19 +29,22 @@ on:
     - wdi-training-amanda-de-santa.online 
     - wdi-training-miguel-madrazo.online
 
-concurrency:
-  group: wdi-server-deploy
-  cancel-in-progress: false  # Don't cancel, just queue them
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
     concurrency:
-      group: deploy-${{ github.ref }}
+      group: deploy-${{ github.ref_name }}
       cancel-in-progress: true
 
     steps:
+    - name: Wait for deployment slot
+      run: |
+        # Simple backoff to spread out simultaneous deployments
+        RANDOM_DELAY=$((RANDOM % 20 + 5)) 
+        echo "⏳ Waiting ${RANDOM_DELAY}s to reduce server load..."
+        sleep $RANDOM_DELAY
+
     - name: Checkout code
       uses: actions/checkout@v4
     
