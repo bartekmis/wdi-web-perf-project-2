@@ -94,7 +94,7 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ offer }) => {
       <DialogTrigger asChild>
         <Button
           className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200 mt-6"
-          onClick={() => setIsOpen(true)}
+          onClick={handleModalOpen}
         >
           Aplikuj na to stanowisko
         </Button>

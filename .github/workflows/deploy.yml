@@ -29,10 +29,18 @@ on:
     - wdi-training-amanda-de-santa.online 
     - wdi-training-miguel-madrazo.online
 
+concurrency:
+  group: wdi-server-deploy
+  cancel-in-progress: false  # Don't cancel, just queue them
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
+    concurrency:
+      group: deploy-${{ github.ref }}
+      cancel-in-progress: true
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
