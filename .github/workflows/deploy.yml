@@ -1,4 +1,4 @@
-name: WDI Multi-Project Deploy with Ports
+name: WDI Multi-Project Deploy with Simple Queue
 
 on:
   push:
@@ -29,22 +29,16 @@ on:
     - wdi-training-amanda-de-santa.online 
     - wdi-training-miguel-madrazo.online
 
+# Remove GitHub Actions concurrency - let all deployments reach the server
+# concurrency:
+#   group: wdi-server-deploy
+#   cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
-    concurrency:
-      group: deploy-${{ github.ref_name }}
-      cancel-in-progress: true
 
     steps:
-    - name: Wait for deployment slot
-      run: |
-        # Simple backoff to spread out simultaneous deployments
-        RANDOM_DELAY=$((RANDOM % 20 + 5)) 
-        echo "⏳ Waiting ${RANDOM_DELAY}s to reduce server load..."
-        sleep $RANDOM_DELAY
-
     - name: Checkout code
       uses: actions/checkout@v4
     
@@ -97,7 +91,7 @@ jobs:
         echo "📁 Path: /var/www/$BRANCH_NAME"
         echo "🌐 Port: $PORT"
     
-    - name: Deploy to server
+    - name: Deploy to server with simple queue
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.SERVER_HOST }}
@@ -109,6 +103,54 @@ jobs:
           PROJECT_PATH="${{ steps.project.outputs.path }}"
           PROJECT_PORT="${{ steps.project.outputs.port }}"
           
+          # Simple file-based queue system
+          LOCK_FILE="/tmp/wdi-deploy.lock"
+          QUEUE_FILE="/tmp/wdi-deploy-queue.txt"
+          
+          echo "🚀 Deployment request for: $PROJECT_NAME"
+          echo "⏰ Time: $(date)"
+          
+          # Add this deployment to the queue
+          echo "$PROJECT_NAME|$PROJECT_PATH|$PROJECT_PORT|$(date)" >> "$QUEUE_FILE"
+          
+          # Wait for our turn (simple queue processing)
+          echo "📋 Checking deployment queue..."
+          
+          while true; do
+            # Check if we can get the lock
+            if (set -C; echo $$ > "$LOCK_FILE") 2>/dev/null; then
+              echo "🔓 Got deployment lock"
+              
+              # We have the lock, check if we're next in queue
+              NEXT_PROJECT=$(head -n1 "$QUEUE_FILE" 2>/dev/null | cut -d'|' -f1)
+              
+              if [ "$NEXT_PROJECT" = "$PROJECT_NAME" ]; then
+                echo "✅ Our turn to deploy!"
+                
+                # Remove ourselves from queue
+                sed -i "1d" "$QUEUE_FILE" 2>/dev/null || true
+                
+                break
+              else
+                echo "⏳ Not our turn yet. Next: $NEXT_PROJECT"
+                # Release lock and wait
+                rm -f "$LOCK_FILE"
+                sleep 10
+              fi
+            else
+              echo "🔒 Another deployment in progress, waiting..."
+              sleep 10
+            fi
+          done
+          
+          # Cleanup function
+          cleanup() {
+            echo "🧹 Cleaning up deployment lock"
+            rm -f "$LOCK_FILE"
+          }
+          trap cleanup EXIT
+          
+          # Now do the actual deployment (your existing logic)
           echo "🚀 Starting deployment for: $PROJECT_NAME"
           echo "📁 Target directory: $PROJECT_PATH"
           echo "🌐 Application port: $PROJECT_PORT"
@@ -124,7 +166,7 @@ jobs:
           
           # Navigate to project directory
           cd "$PROJECT_PATH"
-          echo "📍 Current directory: $(pwd)"
+          echo "📁 Current directory: $(pwd)"
           
           # Show current git status
           echo "📊 Current git status:"
@@ -263,7 +305,7 @@ jobs:
           done
           
           if [ $HEALTH_ATTEMPTS -eq $MAX_ATTEMPTS ]; then
-            echo "⚠️  Health check failed after $MAX_ATTEMPTS attempts"
+            echo "⚠️ Health check failed after $MAX_ATTEMPTS attempts"
             echo "🔍 Checking if process is running..."
             if pgrep -f "next start" > /dev/null; then
               echo "✅ Next.js process is running"
