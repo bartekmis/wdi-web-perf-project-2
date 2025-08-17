@@ -1,0 +1,275 @@
+name: WDI Multi-Project Deploy with Ports
+
+on:
+  push:
+    branches:
+    - wdi-training-cj.online
+    - wdi-training-tommy-vercetti.online
+    - wdi-training-franklin-clinton.online
+    - wdi-training-trevor-philips.online
+    - wdi-training-michael-de-santa.online
+    - wdi-training-big-smoke.online
+    - wdi-training-lester-crest.online
+    - wdi-training-catalina.online
+    - wdi-training-ryder.online
+    - wdi-training-lance-vance.online
+    - wdi-training-niko-bellic.online
+    - wdi-training-roman-bellic.online
+    - wdi-training-hernandez.online
+    - wdi-training-ammu-nation-clerk.online
+    - wdi-training-johnny-klebitz.online
+    - wdi-training-patrick-mcreary.online
+    - wdi-training-derrick-mcreary.online
+    - wdi-training-ray-boccino.online
+    - wdi-training-phil-bell.online
+    - wdi-training-alexandra-chilton.online
+    - wdi-training-michael-de-santa.online
+    - wdi-training-tyler-dixon.online
+    - wdi-training-lazlow.online
+    - wdi-training-amanda-de-santa.online 
+    - wdi-training-miguel-madrazo.online
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Extract project name and configure port
+      id: project
+      run: |
+        BRANCH_NAME=${GITHUB_REF#refs/heads/}
+        
+        # Project to Port Mapping - CUSTOMIZE THESE PORTS
+        declare -A PROJECT_PORTS
+        PROJECT_PORTS["wdi-training-cj.online"]="4007"
+        PROJECT_PORTS["wdi-training-tommy-vercetti.online"]="3002"
+        PROJECT_PORTS["wdi-training-franklin-clinton.online"]="3003"
+        PROJECT_PORTS["wdi-training-trevor-philips.online"]="3004"
+        PROJECT_PORTS["wdi-training-michael-de-santa.online"]="3005"
+        PROJECT_PORTS["wdi-training-big-smoke.online"]="3006"
+        PROJECT_PORTS["wdi-training-lester-crest.online"]="3007"
+        PROJECT_PORTS["wdi-training-catalina.online"]="3008"
+        PROJECT_PORTS["wdi-training-ryder.online"]="3009"
+        PROJECT_PORTS["wdi-training-lance-vance.online"]="3010"
+        PROJECT_PORTS["wdi-training-niko-bellic.online"]="3011"
+        PROJECT_PORTS["wdi-training-roman-bellic.online"]="3012"
+        PROJECT_PORTS["wdi-training-hernandez.online"]="3013"
+        PROJECT_PORTS["wdi-training-ammu-nation-clerk.online"]="3014"
+        PROJECT_PORTS["wdi-training-johnny-klebitz.online"]="3015"
+        PROJECT_PORTS["wdi-training-patrick-mcreary.online"]="3016"
+        PROJECT_PORTS["wdi-training-derrick-mcreary.online"]="3017"
+        PROJECT_PORTS["wdi-training-ray-boccino.online"]="3018"
+        PROJECT_PORTS["wdi-training-phil-bell.online"]="3019"
+        PROJECT_PORTS["wdi-training-alexandra-chilton.online"]="3020"
+        PROJECT_PORTS["wdi-training-michael-de-santa.online"]="3021"
+        PROJECT_PORTS["wdi-training-tyler-dixon.online"]="3022"
+        PROJECT_PORTS["wdi-training-lazlow.online"]="3023"
+        PROJECT_PORTS["wdi-training-amanda-de-santa.online"]="3024"
+        PROJECT_PORTS["wdi-training-miguel-madrazo.online"]="3025"
+        
+        # Get port for current project
+        PORT=${PROJECT_PORTS[$BRANCH_NAME]}
+        
+        if [ -z "$PORT" ]; then
+          echo "❌ Error: No port configured for project $BRANCH_NAME"
+          exit 1
+        fi
+        
+        echo "name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        echo "path=/var/www/$BRANCH_NAME" >> $GITHUB_OUTPUT
+        echo "port=$PORT" >> $GITHUB_OUTPUT
+        
+        echo "🚀 Deploying project: $BRANCH_NAME"
+        echo "📁 Path: /var/www/$BRANCH_NAME"
+        echo "🌐 Port: $PORT"
+    
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SERVER_HOST }}
+        username: ${{ secrets.SERVER_USER }}
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: ${{ secrets.SERVER_PORT || 22 }}
+        script: |
+          PROJECT_NAME="${{ steps.project.outputs.name }}"
+          PROJECT_PATH="${{ steps.project.outputs.path }}"
+          PROJECT_PORT="${{ steps.project.outputs.port }}"
+          
+          echo "🚀 Starting deployment for: $PROJECT_NAME"
+          echo "📁 Target directory: $PROJECT_PATH"
+          echo "🌐 Application port: $PROJECT_PORT"
+          echo "⏰ Deployment started at: $(date)"
+          
+          # Check if project directory exists
+          if [ ! -d "$PROJECT_PATH" ]; then
+            echo "❌ Error: Project directory $PROJECT_PATH does not exist!"
+            echo "📋 Available WDI projects in /var/www/:"
+            ls -la /var/www/ | grep "wdi-training" || echo "No WDI projects found"
+            exit 1
+          fi
+          
+          # Navigate to project directory
+          cd "$PROJECT_PATH"
+          echo "📍 Current directory: $(pwd)"
+          
+          # Show current git status
+          echo "📊 Current git status:"
+          git status --porcelain
+          
+          # Stash any local changes if they exist
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "💾 Stashing local changes..."
+            git stash push -m "Auto-stash before deploy $(date)"
+          fi
+          
+          # Fetch and reset to latest from the specific branch
+          echo "🔄 Fetching latest changes from branch: $PROJECT_NAME"
+          git fetch origin "$PROJECT_NAME" || {
+            echo "❌ Failed to fetch from branch: $PROJECT_NAME"
+            echo "📋 Available remote branches:"
+            git branch -r
+            exit 1
+          }
+          
+          git reset --hard "origin/$PROJECT_NAME"
+          echo "✅ Successfully updated to latest commit"
+          
+          # Check if package.json exists
+          if [ ! -f "package.json" ]; then
+            echo "❌ Error: package.json not found in $PROJECT_PATH"
+            echo "📋 Files in directory:"
+            ls -la
+            exit 1
+          fi
+          
+          # Update/Create .env.local with correct port
+          echo "🔧 Configuring application port..."
+          
+          # Backup existing .env.local if it exists
+          if [ -f ".env.local" ]; then
+            cp .env.local .env.local.backup.$(date +%Y%m%d_%H%M%S)
+          fi
+          
+          # Update or add PORT in .env.local
+          if [ -f ".env.local" ]; then
+            # Remove existing PORT line if it exists
+            sed -i '/^PORT=/d' .env.local
+          fi
+          
+          # Add the correct port
+          echo "PORT=$PROJECT_PORT" >> .env.local
+          echo "✅ Port $PROJECT_PORT configured in .env.local"
+          
+          # Install dependencies
+          echo "📦 Installing dependencies..."
+          if [ -f "package-lock.json" ]; then
+            echo "Using npm ci for faster, reliable builds..."
+            npm ci
+          elif [ -f "yarn.lock" ]; then
+            echo "Using yarn for dependency installation..."
+            yarn install --frozen-lockfile
+          else
+            echo "Using npm install..."
+            npm install
+          fi
+          
+          # Build the Next.js application
+          echo "🔨 Building Next.js application..."
+          if npm run build; then
+            echo "✅ Build completed successfully!"
+          else
+            echo "❌ Build failed for $PROJECT_NAME"
+            echo "📋 Checking npm scripts:"
+            npm run
+            exit 1
+          fi
+          
+          # Restart the application
+          echo "🔄 Restarting application on port $PROJECT_PORT..."
+          
+          # Kill any existing process on this port
+          echo "🛑 Stopping any existing process on port $PROJECT_PORT..."
+          fuser -k ${PROJECT_PORT}/tcp 2>/dev/null || echo "No existing process found on port $PROJECT_PORT"
+          
+          # Wait a moment for the port to be released
+          sleep 2
+          
+          # Method 1: PM2 (recommended)
+          if command -v pm2 >/dev/null 2>&1; then
+            if pm2 list | grep -q "$PROJECT_NAME"; then
+              echo "🔄 Restarting existing PM2 process: $PROJECT_NAME"
+              pm2 restart "$PROJECT_NAME"
+            else
+              echo "🆕 Starting new PM2 process: $PROJECT_NAME on port $PROJECT_PORT"
+              # Set the PORT environment variable for PM2
+              PORT=$PROJECT_PORT pm2 start npm --name "$PROJECT_NAME" -- start
+            fi
+            pm2 save
+            echo "✅ PM2 process updated and saved"
+          
+          # Method 2: Systemd service
+          elif systemctl is-active --quiet "$PROJECT_NAME" 2>/dev/null; then
+            echo "🔄 Restarting systemd service: $PROJECT_NAME"
+            sudo systemctl restart "$PROJECT_NAME"
+            echo "✅ Systemd service restarted"
+          
+          # Method 3: Custom restart script
+          elif [ -f "restart.sh" ]; then
+            echo "📜 Running custom restart script..."
+            chmod +x restart.sh
+            PORT=$PROJECT_PORT ./restart.sh
+            echo "✅ Custom restart script executed"
+          
+          # Method 4: Direct npm start with nohup
+          else
+            echo "🆕 Starting application directly with npm..."
+            nohup npm start > /dev/null 2>&1 &
+            echo "✅ Application started in background"
+          fi
+          
+          # Health check
+          echo "🏥 Performing health check on port $PROJECT_PORT..."
+          sleep 5
+          
+          HEALTH_URL="http://localhost:$PROJECT_PORT"
+          
+          # Try health check multiple times
+          HEALTH_ATTEMPTS=0
+          MAX_ATTEMPTS=10
+          
+          while [ $HEALTH_ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            if curl -f "$HEALTH_URL" >/dev/null 2>&1; then
+              echo "✅ Health check passed: $HEALTH_URL"
+              break
+            else
+              HEALTH_ATTEMPTS=$((HEALTH_ATTEMPTS + 1))
+              echo "⏳ Health check attempt $HEALTH_ATTEMPTS/$MAX_ATTEMPTS failed, retrying in 3 seconds..."
+              sleep 3
+            fi
+          done
+          
+          if [ $HEALTH_ATTEMPTS -eq $MAX_ATTEMPTS ]; then
+            echo "⚠️  Health check failed after $MAX_ATTEMPTS attempts"
+            echo "🔍 Checking if process is running..."
+            if pgrep -f "next start" > /dev/null; then
+              echo "✅ Next.js process is running"
+            else
+              echo "❌ Next.js process not found"
+            fi
+            
+            echo "🔍 Checking port usage..."
+            netstat -tulpn | grep ":$PROJECT_PORT " || echo "Port $PROJECT_PORT not in use"
+          fi
+          
+          # Summary
+          echo ""
+          echo "🎉 Deployment Summary for $PROJECT_NAME:"
+          echo "   📁 Location: $PROJECT_PATH"
+          echo "   🌐 URL: $HEALTH_URL"
+          echo "   🔌 Port: $PROJECT_PORT"
+          echo "   ⏰ Completed at: $(date)"
+          echo "   ✅ Status: SUCCESS"
+          echo ""
