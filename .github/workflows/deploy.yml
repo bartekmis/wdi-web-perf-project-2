@@ -1,4 +1,4 @@
-name: WDI Multi-Project Deploy with Enhanced Queue and Timeout Handling
+name: WDI Multi-Project Deploy with Simple Queue
 
 on:
   push:
@@ -29,19 +29,21 @@ on:
     - wdi-training-amanda-de-santa.online 
     - wdi-training-miguel-madrazo.online
 
+# Remove GitHub Actions concurrency - let all deployments reach the server
+# concurrency:
+#   group: wdi-server-deploy
+#   cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Set explicit timeout for the entire job
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      timeout-minutes: 5  # Timeout for checkout step
     
     - name: Extract project name and configure port
       id: project
-      timeout-minutes: 2  # Timeout for project configuration
       run: |
         BRANCH_NAME=${GITHUB_REF#refs/heads/}
         
@@ -89,96 +91,41 @@ jobs:
         echo "📁 Path: /var/www/$BRANCH_NAME"
         echo "🌐 Port: $PORT"
     
-    - name: Deploy to server with enhanced queue and timeout handling
+    - name: Deploy to server with simple queue
+      timeout-minutes: 60
       uses: appleboy/ssh-action@v1.0.3
-      timeout-minutes: 20  # Timeout for deployment step
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: ${{ secrets.SERVER_PORT || 22 }}
-        command_timeout: 18m  # SSH command timeout (slightly less than step timeout)
         script: |
           PROJECT_NAME="${{ steps.project.outputs.name }}"
           PROJECT_PATH="${{ steps.project.outputs.path }}"
           PROJECT_PORT="${{ steps.project.outputs.port }}"
           
-          # Enhanced queue system with timeouts
+          # Simple file-based queue system
           LOCK_FILE="/tmp/wdi-deploy.lock"
           QUEUE_FILE="/tmp/wdi-deploy-queue.txt"
-          MAX_QUEUE_WAIT_MINUTES=8  # Maximum time to wait in queue
-          LOCK_TIMEOUT_MINUTES=15   # Maximum time a lock can be held
           
           echo "🚀 Deployment request for: $PROJECT_NAME"
           echo "⏰ Time: $(date)"
-          echo "⏳ Max queue wait: ${MAX_QUEUE_WAIT_MINUTES} minutes"
           
-          # Cleanup old locks (older than LOCK_TIMEOUT_MINUTES)
-          if [ -f "$LOCK_FILE" ]; then
-            LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo 0) ))
-            LOCK_AGE_MINUTES=$(( LOCK_AGE / 60 ))
-            
-            if [ $LOCK_AGE_MINUTES -gt $LOCK_TIMEOUT_MINUTES ]; then
-              echo "🧹 Removing stale lock file (${LOCK_AGE_MINUTES} minutes old)"
-              rm -f "$LOCK_FILE"
-            fi
-          fi
+          # Add this deployment to the queue
+          echo "$PROJECT_NAME|$PROJECT_PATH|$PROJECT_PORT|$(date)" >> "$QUEUE_FILE"
           
-          # Clean up old queue entries (older than 2 hours)
-          if [ -f "$QUEUE_FILE" ]; then
-            TEMP_QUEUE="/tmp/wdi-deploy-queue-temp.txt"
-            CURRENT_TIME=$(date +%s)
-            
-            while IFS='|' read -r name path port timestamp; do
-              if [ -n "$timestamp" ]; then
-                ENTRY_TIME=$(date -d "$timestamp" +%s 2>/dev/null || echo 0)
-                AGE_HOURS=$(( (CURRENT_TIME - ENTRY_TIME) / 3600 ))
-                
-                if [ $AGE_HOURS -le 2 ]; then
-                  echo "$name|$path|$port|$timestamp" >> "$TEMP_QUEUE"
-                else
-                  echo "🗑️ Removing old queue entry: $name (${AGE_HOURS}h old)"
-                fi
-              fi
-            done < "$QUEUE_FILE"
-            
-            if [ -f "$TEMP_QUEUE" ]; then
-              mv "$TEMP_QUEUE" "$QUEUE_FILE"
-            else
-              rm -f "$QUEUE_FILE"
-            fi
-          fi
-          
-          # Add this deployment to the queue with unique identifier
-          QUEUE_ID="${PROJECT_NAME}_$(date +%s)_$$"
-          echo "$QUEUE_ID|$PROJECT_NAME|$PROJECT_PATH|$PROJECT_PORT|$(date)" >> "$QUEUE_FILE"
-          
-          # Queue processing with timeout
+          # Wait for our turn (simple queue processing)
           echo "📋 Checking deployment queue..."
-          QUEUE_START_TIME=$(date +%s)
           
           while true; do
-            # Check if we've been waiting too long
-            CURRENT_TIME=$(date +%s)
-            WAIT_TIME_MINUTES=$(( (CURRENT_TIME - QUEUE_START_TIME) / 60 ))
-            
-            if [ $WAIT_TIME_MINUTES -ge $MAX_QUEUE_WAIT_MINUTES ]; then
-              echo "⏰ Queue timeout reached (${WAIT_TIME_MINUTES} minutes). Aborting deployment."
-              # Remove ourselves from queue
-              grep -v "^$QUEUE_ID|" "$QUEUE_FILE" > "$QUEUE_FILE.tmp" 2>/dev/null && mv "$QUEUE_FILE.tmp" "$QUEUE_FILE" || true
-              exit 1
-            fi
-            
-            # Try to get the lock with timeout
+            # Check if we can get the lock
             if (set -C; echo $$ > "$LOCK_FILE") 2>/dev/null; then
-              echo "🔒 Got deployment lock"
+              echo "🔓 Got deployment lock"
               
-              # Check if we're next in queue
-              NEXT_ENTRY=$(head -n1 "$QUEUE_FILE" 2>/dev/null)
-              NEXT_QUEUE_ID=$(echo "$NEXT_ENTRY" | cut -d'|' -f1)
-              NEXT_PROJECT=$(echo "$NEXT_ENTRY" | cut -d'|' -f2)
+              # We have the lock, check if we're next in queue
+              NEXT_PROJECT=$(head -n1 "$QUEUE_FILE" 2>/dev/null | cut -d'|' -f1)
               
-              if [ "$NEXT_QUEUE_ID" = "$QUEUE_ID" ]; then
+              if [ "$NEXT_PROJECT" = "$PROJECT_NAME" ]; then
                 echo "✅ Our turn to deploy!"
                 
                 # Remove ourselves from queue
@@ -186,52 +133,29 @@ jobs:
                 
                 break
               else
-                echo "⏳ Not our turn yet. Next: $NEXT_PROJECT (waited ${WAIT_TIME_MINUTES}/${MAX_QUEUE_WAIT_MINUTES} min)"
+                echo "⏳ Not our turn yet. Next: $NEXT_PROJECT"
                 # Release lock and wait
                 rm -f "$LOCK_FILE"
-                sleep 5  # Reduced sleep time for faster queue processing
+                sleep 10
               fi
             else
-              LOCK_HOLDER=$(cat "$LOCK_FILE" 2>/dev/null || echo "unknown")
-              echo "🔐 Another deployment in progress (PID: $LOCK_HOLDER), waiting... (${WAIT_TIME_MINUTES}/${MAX_QUEUE_WAIT_MINUTES} min)"
-              sleep 5
+              echo "🔒 Another deployment in progress, waiting..."
+              sleep 10
             fi
           done
           
-          # Enhanced cleanup function
+          # Cleanup function
           cleanup() {
-            echo "🧹 Cleaning up deployment lock and queue entry"
+            echo "🧹 Cleaning up deployment lock"
             rm -f "$LOCK_FILE"
-            # Remove any remaining queue entries for this deployment
-            if [ -f "$QUEUE_FILE" ]; then
-              grep -v "^$QUEUE_ID|" "$QUEUE_FILE" > "$QUEUE_FILE.tmp" 2>/dev/null && mv "$QUEUE_FILE.tmp" "$QUEUE_FILE" || true
-            fi
           }
           trap cleanup EXIT
           
-          # Set deployment timeout
-          DEPLOY_START_TIME=$(date +%s)
-          MAX_DEPLOY_MINUTES=12
-          
-          # Function to check deployment timeout
-          check_deploy_timeout() {
-            CURRENT_TIME=$(date +%s)
-            DEPLOY_TIME_MINUTES=$(( (CURRENT_TIME - DEPLOY_START_TIME) / 60 ))
-            
-            if [ $DEPLOY_TIME_MINUTES -ge $MAX_DEPLOY_MINUTES ]; then
-              echo "⏰ Deployment timeout reached (${DEPLOY_TIME_MINUTES} minutes). Aborting."
-              exit 1
-            fi
-          }
-          
-          # Deployment process with timeout checks
+          # Now do the actual deployment (your existing logic)
           echo "🚀 Starting deployment for: $PROJECT_NAME"
           echo "📁 Target directory: $PROJECT_PATH"
           echo "🌐 Application port: $PROJECT_PORT"
           echo "⏰ Deployment started at: $(date)"
-          echo "⏳ Max deployment time: ${MAX_DEPLOY_MINUTES} minutes"
-          
-          check_deploy_timeout
           
           # Check if project directory exists
           if [ ! -d "$PROJECT_PATH" ]; then
@@ -243,9 +167,7 @@ jobs:
           
           # Navigate to project directory
           cd "$PROJECT_PATH"
-          echo "📍 Current directory: $(pwd)"
-          
-          check_deploy_timeout
+          echo "📁 Current directory: $(pwd)"
           
           # Show current git status
           echo "📊 Current git status:"
@@ -254,29 +176,20 @@ jobs:
           # Stash any local changes if they exist
           if [ -n "$(git status --porcelain)" ]; then
             echo "💾 Stashing local changes..."
-            timeout 60 git stash push -m "Auto-stash before deploy $(date)" || {
-              echo "⚠️ Git stash timed out or failed, continuing..."
-            }
+            git stash push -m "Auto-stash before deploy $(date)"
           fi
-          
-          check_deploy_timeout
           
           # Fetch and reset to latest from the specific branch
           echo "🔄 Fetching latest changes from branch: $PROJECT_NAME"
-          timeout 120 git fetch origin "$PROJECT_NAME" || {
+          git fetch origin "$PROJECT_NAME" || {
             echo "❌ Failed to fetch from branch: $PROJECT_NAME"
             echo "📋 Available remote branches:"
             git branch -r
             exit 1
           }
           
-          timeout 60 git reset --hard "origin/$PROJECT_NAME" || {
-            echo "❌ Failed to reset to origin/$PROJECT_NAME"
-            exit 1
-          }
+          git reset --hard "origin/$PROJECT_NAME"
           echo "✅ Successfully updated to latest commit"
-          
-          check_deploy_timeout
           
           # Check if package.json exists
           if [ ! -f "package.json" ]; then
@@ -304,51 +217,36 @@ jobs:
           echo "PORT=$PROJECT_PORT" >> .env.local
           echo "✅ Port $PROJECT_PORT configured in .env.local"
           
-          check_deploy_timeout
-          
-          # Install dependencies with timeout
+          # Install dependencies
           echo "📦 Installing dependencies..."
           if [ -f "package-lock.json" ]; then
             echo "Using npm ci for faster, reliable builds..."
-            timeout 300 npm ci || {
-              echo "❌ npm ci timed out or failed"
-              exit 1
-            }
+            npm ci
           elif [ -f "yarn.lock" ]; then
             echo "Using yarn for dependency installation..."
-            timeout 300 yarn install --frozen-lockfile || {
-              echo "❌ yarn install timed out or failed"
-              exit 1
-            }
+            yarn install --frozen-lockfile
           else
             echo "Using npm install..."
-            timeout 300 npm install || {
-              echo "❌ npm install timed out or failed"
-              exit 1
-            }
+            npm install
           fi
           
-          check_deploy_timeout
-          
-          # Build the Next.js application with timeout
+          # Build the Next.js application
           echo "🔨 Building Next.js application..."
-          if timeout 480 npm run build; then
+          if npm run build; then
             echo "✅ Build completed successfully!"
           else
-            echo "❌ Build failed or timed out for $PROJECT_NAME"
+            echo "❌ Build failed for $PROJECT_NAME"
             echo "📋 Checking npm scripts:"
-            npm run 2>/dev/null || echo "Could not list npm scripts"
+            npm run
             exit 1
           fi
-          
-          check_deploy_timeout
           
           # Restart the application
           echo "🔄 Restarting application on port $PROJECT_PORT..."
           
           # Kill any existing process on this port
           echo "🛑 Stopping any existing process on port $PROJECT_PORT..."
-          timeout 30 fuser -k ${PROJECT_PORT}/tcp 2>/dev/null || echo "No existing process found on port $PROJECT_PORT"
+          fuser -k ${PROJECT_PORT}/tcp 2>/dev/null || echo "No existing process found on port $PROJECT_PORT"
           
           # Wait a moment for the port to be released
           sleep 2
@@ -357,14 +255,10 @@ jobs:
           if command -v pm2 >/dev/null 2>&1; then
             if pm2 list | grep -q "$PROJECT_NAME"; then
               echo "🔄 Restarting existing PM2 process: $PROJECT_NAME"
-              timeout 60 pm2 restart "$PROJECT_NAME" || {
-                echo "⚠️ PM2 restart timed out, trying to delete and recreate..."
-                pm2 delete "$PROJECT_NAME" 2>/dev/null || true
-                sleep 2
-                PORT=$PROJECT_PORT pm2 start npm --name "$PROJECT_NAME" -- start
-              }
+              pm2 restart "$PROJECT_NAME"
             else
               echo "🆕 Starting new PM2 process: $PROJECT_NAME on port $PROJECT_PORT"
+              # Set the PORT environment variable for PM2
               PORT=$PROJECT_PORT pm2 start npm --name "$PROJECT_NAME" -- start
             fi
             pm2 save
@@ -373,78 +267,63 @@ jobs:
           # Method 2: Systemd service
           elif systemctl is-active --quiet "$PROJECT_NAME" 2>/dev/null; then
             echo "🔄 Restarting systemd service: $PROJECT_NAME"
-            timeout 60 sudo systemctl restart "$PROJECT_NAME" || {
-              echo "❌ Systemd restart timed out or failed"
-              exit 1
-            }
+            sudo systemctl restart "$PROJECT_NAME"
             echo "✅ Systemd service restarted"
           
           # Method 3: Custom restart script
           elif [ -f "restart.sh" ]; then
             echo "📜 Running custom restart script..."
             chmod +x restart.sh
-            timeout 120 env PORT=$PROJECT_PORT ./restart.sh || {
-              echo "❌ Custom restart script timed out or failed"
-              exit 1
-            }
+            PORT=$PROJECT_PORT ./restart.sh
             echo "✅ Custom restart script executed"
           
           # Method 4: Direct npm start with nohup
           else
             echo "🆕 Starting application directly with npm..."
-            nohup env PORT=$PROJECT_PORT npm start > /dev/null 2>&1 &
+            nohup npm start > /dev/null 2>&1 &
             echo "✅ Application started in background"
           fi
           
-          # Health check with timeout
+          # Health check
           echo "🏥 Performing health check on port $PROJECT_PORT..."
-          sleep 3
+          sleep 5
           
           HEALTH_URL="http://localhost:$PROJECT_PORT"
           
-          # Try health check multiple times with timeout
+          # Try health check multiple times
           HEALTH_ATTEMPTS=0
-          MAX_ATTEMPTS=6
+          MAX_ATTEMPTS=10
           
           while [ $HEALTH_ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            if timeout 10 curl -f "$HEALTH_URL" >/dev/null 2>&1; then
+            if curl -f "$HEALTH_URL" >/dev/null 2>&1; then
               echo "✅ Health check passed: $HEALTH_URL"
               break
             else
               HEALTH_ATTEMPTS=$((HEALTH_ATTEMPTS + 1))
-              echo "⏳ Health check attempt $HEALTH_ATTEMPTS/$MAX_ATTEMPTS failed, retrying in 5 seconds..."
-              sleep 5
+              echo "⏳ Health check attempt $HEALTH_ATTEMPTS/$MAX_ATTEMPTS failed, retrying in 3 seconds..."
+              sleep 3
             fi
-            check_deploy_timeout
           done
           
           if [ $HEALTH_ATTEMPTS -eq $MAX_ATTEMPTS ]; then
             echo "⚠️ Health check failed after $MAX_ATTEMPTS attempts"
-            echo "📍 Checking if process is running..."
+            echo "🔍 Checking if process is running..."
             if pgrep -f "next start" > /dev/null; then
               echo "✅ Next.js process is running"
             else
               echo "❌ Next.js process not found"
             fi
             
-            echo "📍 Checking port usage..."
+            echo "🔍 Checking port usage..."
             netstat -tulpn | grep ":$PROJECT_PORT " || echo "Port $PROJECT_PORT not in use"
           fi
           
-          # Final timeout check
-          check_deploy_timeout
-          
           # Summary
-          DEPLOY_END_TIME=$(date +%s)
-          TOTAL_DEPLOY_TIME=$(( (DEPLOY_END_TIME - DEPLOY_START_TIME) / 60 ))
-          
           echo ""
           echo "🎉 Deployment Summary for $PROJECT_NAME:"
           echo "   📁 Location: $PROJECT_PATH"
           echo "   🌐 URL: $HEALTH_URL"
           echo "   🔌 Port: $PROJECT_PORT"
-          echo "   ⏰ Started at: $(date -d @$DEPLOY_START_TIME)"
           echo "   ⏰ Completed at: $(date)"
-          echo "   ⏱️ Total time: ${TOTAL_DEPLOY_TIME} minutes"
           echo "   ✅ Status: SUCCESS"
           echo ""
