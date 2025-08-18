@@ -11,6 +11,7 @@ export const SectionClient = () => {
   const [duration, setDuration] = useState<number>(0);
   const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [sortBy, setSortBy] = useState<string>("newest");
+  const [filterQuery, setFilterQuery] = useState<string>("");
 
   const { data: allJobs = [], isLoading } = useQuery({
     queryKey: ["jobs-client"],
@@ -130,6 +131,7 @@ export const SectionClient = () => {
           <h2 className="text-3xl font-bold text-center mb-8">
             Client-Side Rendered Jobs
           </h2>
+          <div className="h-12 bg-gray-200 rounded mb-4" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <Card key={i} className="p-6 animate-pulse">
@@ -166,7 +168,52 @@ export const SectionClient = () => {
             Rendering technique: CSR | Load time: {duration.toFixed(2)}ms
           </p>
         </div>
-
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
+          <div className="flex items-center gap-2">
+            <label htmlFor="sort-by" className="font-medium">
+              Sortuj według:
+            </label>
+            <select
+              id="sort-by"
+              value={sortBy}
+              onChange={(e) =>
+                window.dispatchEvent(
+                  new CustomEvent("jobSort", {
+                    detail: { sortBy: e.target.value },
+                  })
+                )
+              }
+              className="border rounded px-2 py-1"
+            >
+              <option value="newest">Najnowsze</option>
+              <option value="company">Firmy</option>
+              <option value="position">Pozycji</option>
+            </select>
+          </div>
+          <div>
+            <input
+              type="text"
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Filtruj po nazwie stanowiska..."
+              className="border rounded px-4 py-2 w-full md:w-64"
+            />
+          </div>
+          <button
+            onClick={() => {
+              const queryParams = new URLSearchParams();
+              if (filterQuery) queryParams.append("role", filterQuery);
+              window.dispatchEvent(
+                new CustomEvent("jobSearch", {
+                  detail: { queryString: queryParams.toString() },
+                })
+              );
+            }}
+            className="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition-colors font-semibold"
+          >
+            Filtruj
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {(filteredJobs.length > 0 ? filteredJobs : allJobs.slice(0, 6)).map(
             (job: Job) => (
