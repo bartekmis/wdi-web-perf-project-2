@@ -79,7 +79,7 @@ export default async function RootLayout({
           <footer className="bg-gray-800 text-white py-8 mt-auto">
             <div className="container mx-auto px-4 text-center">
               <h3 className="text-lg font-semibold mb-4">
-                Performance Demonstration.
+                Performance Demonstration....
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                 <div>
