@@ -5,29 +5,29 @@ on:
     branches:
     - wdi-training-cj.online
     - wdi-training-tommy-vercetti.online
-    - wdi-training-franklin-clinton.online
-    - wdi-training-trevor-philips.online
-    - wdi-training-michael-de-santa.online
+    #- wdi-training-franklin-clinton.online
+    #- wdi-training-trevor-philips.online
+    #- wdi-training-michael-de-santa.online
     - wdi-training-big-smoke.online
-    - wdi-training-lester-crest.online
-    - wdi-training-catalina.online
-    - wdi-training-ryder.online
-    - wdi-training-lance-vance.online
-    - wdi-training-niko-bellic.online
-    - wdi-training-roman-bellic.online
-    - wdi-training-hernandez.online
-    - wdi-training-ammu-nation-clerk.online
-    - wdi-training-johnny-klebitz.online
-    - wdi-training-patrick-mcreary.online
-    - wdi-training-derrick-mcreary.online
-    - wdi-training-ray-boccino.online
-    - wdi-training-phil-bell.online
-    - wdi-training-alexandra-chilton.online
-    - wdi-training-michael-de-santa.online
+    #- wdi-training-lester-crest.online
+    #- wdi-training-catalina.online
+    #- wdi-training-ryder.online
+    #- wdi-training-lance-vance.online
+    #- wdi-training-niko-bellic.online
+    #- wdi-training-roman-bellic.online
+    #- wdi-training-hernandez.online
+    #- wdi-training-ammu-nation-clerk.online
+    #- wdi-training-johnny-klebitz.online
+    #- wdi-training-patrick-mcreary.online
+    #- wdi-training-derrick-mcreary.online
+    #- wdi-training-ray-boccino.online
+    #- wdi-training-phil-bell.online
+    #- wdi-training-alexandra-chilton.online
+    #- wdi-training-michael-de-santa.online
     - wdi-training-tyler-dixon.online
     - wdi-training-lazlow.online
-    - wdi-training-amanda-de-santa.online 
-    - wdi-training-miguel-madrazo.online
+    #- wdi-training-amanda-de-santa.online 
+    #- wdi-training-miguel-madrazo.online
 
 # Remove GitHub Actions concurrency - let all deployments reach the server
 # concurrency:
@@ -107,9 +107,9 @@ jobs:
           
           # Robust file-based lock system with stale lock detection
           LOCK_FILE="/tmp/wdi-deploy.lock"
-          LOCK_MAX_AGE=1800        # 30 minutes - consider lock stale after this
-          MAX_WAIT_TIME=2700       # 45 minutes - max time to wait for lock
-          WAIT_INTERVAL=15         # seconds between lock attempts
+          LOCK_MAX_AGE=3600        # 30 minutes - consider lock stale after this
+          MAX_WAIT_TIME=3600       # 45 minutes - max time to wait for lock
+          WAIT_INTERVAL=5         # seconds between lock attempts
 
           echo "🚀 Deployment request for: $PROJECT_NAME"
           echo "⏰ Time: $(date)"
