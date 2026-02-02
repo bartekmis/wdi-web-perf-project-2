@@ -105,52 +105,59 @@ jobs:
           PROJECT_PATH="${{ steps.project.outputs.path }}"
           PROJECT_PORT="${{ steps.project.outputs.port }}"
           
-          # Simple file-based queue system
+          # Robust file-based lock system with stale lock detection
           LOCK_FILE="/tmp/wdi-deploy.lock"
-          QUEUE_FILE="/tmp/wdi-deploy-queue.txt"
-          
+          LOCK_MAX_AGE=1800        # 30 minutes - consider lock stale after this
+          MAX_WAIT_TIME=2700       # 45 minutes - max time to wait for lock
+          WAIT_INTERVAL=15         # seconds between lock attempts
+
           echo "🚀 Deployment request for: $PROJECT_NAME"
           echo "⏰ Time: $(date)"
-          
-          # Add this deployment to the queue
-          echo "$PROJECT_NAME|$PROJECT_PATH|$PROJECT_PORT|$(date)" >> "$QUEUE_FILE"
-          
-          # Wait for our turn (simple queue processing)
-          echo "📋 Checking deployment queue..."
-          
+
+          WAIT_START=$(date +%s)
+
           while true; do
-            # Check if we can get the lock
-            if (set -C; echo $$ > "$LOCK_FILE") 2>/dev/null; then
-              echo "🔓 Got deployment lock"
-              
-              # We have the lock, check if we're next in queue
-              NEXT_PROJECT=$(head -n1 "$QUEUE_FILE" 2>/dev/null | cut -d'|' -f1)
-              
-              if [ "$NEXT_PROJECT" = "$PROJECT_NAME" ]; then
-                echo "✅ Our turn to deploy!"
-                
-                # Remove ourselves from queue
-                sed -i "1d" "$QUEUE_FILE" 2>/dev/null || true
-                
-                break
-              else
-                echo "⏳ Not our turn yet. Next: $NEXT_PROJECT"
-                # Release lock and wait
+            # Check if we've waited too long
+            ELAPSED=$(( $(date +%s) - $WAIT_START ))
+            if [ $ELAPSED -gt $MAX_WAIT_TIME ]; then
+              echo "❌ Timeout: waited ${ELAPSED}s for deployment lock (max: ${MAX_WAIT_TIME}s)"
+              echo "🧹 Force-clearing lock and queue files..."
+              rm -f "$LOCK_FILE"
+              exit 1
+            fi
+
+            # Check for stale lock
+            if [ -f "$LOCK_FILE" ]; then
+              LOCK_AGE=$(( $(date +%s) - $(stat -c %Y "$LOCK_FILE" 2>/dev/null || echo "0") ))
+              LOCK_PID=$(cut -d'|' -f1 "$LOCK_FILE" 2>/dev/null || echo "")
+
+              if [ $LOCK_AGE -gt $LOCK_MAX_AGE ]; then
+                echo "🧹 Removing stale lock (${LOCK_AGE}s old, max: ${LOCK_MAX_AGE}s)"
                 rm -f "$LOCK_FILE"
-                sleep 10
+              elif [ -n "$LOCK_PID" ] && ! kill -0 "$LOCK_PID" 2>/dev/null; then
+                echo "🧹 Removing orphan lock (PID $LOCK_PID no longer exists)"
+                rm -f "$LOCK_FILE"
               fi
+            fi
+
+            # Try to acquire the lock
+            if (set -C; echo "$$|$PROJECT_NAME|$(date +%s)" > "$LOCK_FILE") 2>/dev/null; then
+              echo "🔓 Acquired deployment lock (PID: $$)"
+              break
             else
-              echo "🔒 Another deployment in progress, waiting..."
-              sleep 10
+              LOCK_INFO=$(cat "$LOCK_FILE" 2>/dev/null || echo "unknown")
+              echo "🔒 Lock held by: $LOCK_INFO - waiting... (${ELAPSED}s elapsed)"
+              sleep $WAIT_INTERVAL
             fi
           done
           
-          # Cleanup function
+          # Cleanup function - always release lock when done
           cleanup() {
-            echo "🧹 Cleaning up deployment lock"
+            echo "🧹 Releasing deployment lock for $PROJECT_NAME"
             rm -f "$LOCK_FILE"
+            echo "✅ Lock released at $(date)"
           }
-          trap cleanup EXIT
+          trap cleanup EXIT INT TERM
           
           # Now do the actual deployment (your existing logic)
           echo "🚀 Starting deployment for: $PROJECT_NAME"
