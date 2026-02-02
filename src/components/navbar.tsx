@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Route } from "@/types/navbar";
 import { Job } from "@/types/job";
+import Link from "next/link";
 
 export const Navbar = () => {
   const [items, setItems] = useState<Route[]>([]);
@@ -19,7 +20,7 @@ export const Navbar = () => {
         setItems(navResponse.data);
 
         const jobsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`,
         );
         const jobs = jobsResponse.data as Job[];
 
@@ -28,7 +29,7 @@ export const Navbar = () => {
 
         for (const category of categories) {
           const categoryJobs = jobs.filter(
-            (job: Job) => job.category === category
+            (job: Job) => job.category === category,
           );
           console.log(`Category ${category}: ${categoryJobs.length} jobs`);
         }
@@ -46,14 +47,14 @@ export const Navbar = () => {
   const handleItemHover = async (item: Route) => {
     try {
       const jobsResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`,
       );
       const categoryJobs = jobsResponse.data.filter(
         (job: Job) =>
-          job.category === item.label || item.label.includes(job.category)
+          job.category === item.label || item.label.includes(job.category),
       );
       console.log(
-        `Hovered ${item.label}: Found ${categoryJobs.length} related jobs`
+        `Hovered ${item.label}: Found ${categoryJobs.length} related jobs`,
       );
     } catch {
       console.log("Hover job fetch failed");
@@ -82,6 +83,7 @@ export const Navbar = () => {
     <nav className="bg-blue-600 text-white p-4 shadow-lg">
       <div className="container mx-auto flex justify-between items-center">
         <div className="text-xl font-bold">Job Hub</div>
+        <Link href="/bundle-problem">Bundle Problem Page</Link>
         <div className="flex space-x-6">
           {items.map((item) => (
             <a

@@ -7,8 +7,8 @@ export interface Job {
   category: string;
   role: string;
   location: string;
-  workMode: 'Zdalna' | 'Stacjonarna' | 'Hybrydowa';
-  position: 'Junior' | 'Mid' | 'Senior';
+  workMode: "Zdalna" | "Stacjonarna" | "Hybrydowa";
+  position: "Junior" | "Mid" | "Senior";
   responsibilities: string[];
   benefits: string[];
 }
