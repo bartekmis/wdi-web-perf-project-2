@@ -109,11 +109,11 @@ export const saveVisitedJob = (job: Job) => {
   cachedVisitedJobs = visitedJobs;
 
   // Use requestIdleCallback to defer localStorage write
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => {
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    window.requestIdleCallback(() => {
       localStorage.setItem("visitedJobs", JSON.stringify(visitedJobs));
     });
-  } else {
+  } else if (typeof window !== 'undefined') {
     // Fallback for browsers without requestIdleCallback
     setTimeout(() => {
       localStorage.setItem("visitedJobs", JSON.stringify(visitedJobs));

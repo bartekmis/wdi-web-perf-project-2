@@ -19,9 +19,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  
+
   return (
     <html lang="en">
       <head>
@@ -40,15 +40,19 @@ export default async function RootLayout({
           />
         )}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
+        {recaptchaSiteKey && (
+          <script src={`https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`}></script>
+        )}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script type="text/javascript" src="https://www.termsfeed.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
-        <script 
-          type="text/javascript" 
+        <script
+          type="text/javascript"
           dangerouslySetInnerHTML={{
             __html: `
               document.addEventListener('DOMContentLoaded', function () {
-                cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
+                if (typeof cookieconsent !== 'undefined' && cookieconsent.run) {
+                  cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
+                }
               });
             `
           }}

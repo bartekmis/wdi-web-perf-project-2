@@ -5,7 +5,7 @@ import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { saveVisitedJob } from "@/components/last-visited-banner";
 import { cn } from "@/lib/utils";
-import { memo } from "react";
+import { memo, useState, useEffect } from "react";
 
 export type JobCardVariant =
   | "client"
@@ -125,6 +125,11 @@ export const JobCard = memo(({
   className,
 }: JobCardProps) => {
   const config = variantConfig[variant];
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleApply = (e: React.MouseEvent) => {
     if (onApply) {
@@ -238,7 +243,7 @@ export const JobCard = memo(({
         </div>
       </Link>
 
-      {showMetadata && metadata?.cacheInfo && variant === "isr" && (
+      {showMetadata && metadata?.cacheInfo && variant === "isr" && mounted && (
         <p className="text-xs text-center text-gray-500 mt-2">
           Cached until: {new Date(Date.now() + 60000).toLocaleTimeString()}
         </p>
