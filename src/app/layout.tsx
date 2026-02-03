@@ -1,9 +1,23 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
+
+const NAVBAR_SKELETON = (
+  <nav className="bg-blue-600 text-white p-4">
+    <div className="container mx-auto flex justify-between items-center">
+      <div className="text-xl font-bold">Job Hub</div>
+      <div className="flex space-x-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="animate-pulse bg-blue-400 h-6 w-20 rounded"></div>
+        ))}
+      </div>
+    </div>
+  </nav>
+);
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -74,36 +88,40 @@ export default async function RootLayout({
       </head>
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
-          <Navbar />
-          <QueryProvider>{children}</QueryProvider>
-          <footer className="bg-gray-800 text-white py-8 mt-auto">
-            <div className="container mx-auto px-4 text-center">
-              <h3 className="text-lg font-semibold mb-4">
-                Performance Demonstration...
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-                <div>
-                  <strong>Client-Side:</strong> Over-fetching, no caching,
-                  redundant requests
-                </div>
-                <div>
-                  <strong>Server-Side:</strong> No caching, sequential requests,
-                  redundant fetches
-                </div>
-                <div>
-                  <strong>SSG:</strong> Revalidate 0, over-fetching at build
-                  time
-                </div>
-                <div>
-                  <strong>Suspense:</strong> Inefficient streaming, redundant
-                  requests
-                </div>
-                <div>
-                  <strong>ISR:</strong> Short revalidation, over-processing
+          <QueryProvider>
+            <Suspense fallback={NAVBAR_SKELETON}>
+              <Navbar />
+            </Suspense>
+            {children}
+            <footer className="bg-gray-800 text-white py-8 mt-auto">
+              <div className="container mx-auto px-4 text-center">
+                <h3 className="text-lg font-semibold mb-4">
+                  Performance Demonstration...
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+                  <div>
+                    <strong>Client-Side:</strong> Over-fetching, no caching,
+                    redundant requests
+                  </div>
+                  <div>
+                    <strong>Server-Side:</strong> No caching, sequential
+                    requests, redundant fetches
+                  </div>
+                  <div>
+                    <strong>SSG:</strong> Revalidate 0, over-fetching at build
+                    time
+                  </div>
+                  <div>
+                    <strong>Suspense:</strong> Inefficient streaming, redundant
+                    requests
+                  </div>
+                  <div>
+                    <strong>ISR:</strong> Short revalidation, over-processing
+                  </div>
                 </div>
               </div>
-            </div>
-          </footer>
+            </footer>
+          </QueryProvider>
         </div>
       </body>
     </html>

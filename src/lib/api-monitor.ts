@@ -1,5 +1,3 @@
-import axios from "axios";
-
 let apiCallCount = 0;
 
 const subscribers = new Set<(count: number) => void>();
@@ -17,18 +15,21 @@ const notifySubscribers = () => {
   subscribers.forEach((callback) => callback(apiCallCount));
 };
 
-axios.interceptors.request.use(
-  (config) => {
+// Intercept global fetch instead of axios — all client fetches now use
+// native fetch. Guard ensures this only patches in the browser.
+if (typeof window !== "undefined") {
+  const originalFetch = window.fetch;
+  window.fetch = async (...args: Parameters<typeof fetch>) => {
     apiCallCount++;
-    console.log(
-      `[AXIOS] API Call #${apiCallCount}: ${config.method?.toUpperCase()} ${
-        config.url
-      }`
-    );
+    const input = args[0];
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    console.log(`[FETCH] API Call #${apiCallCount}: ${url}`);
     notifySubscribers();
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+    return originalFetch.apply(window, args);
+  };
+}

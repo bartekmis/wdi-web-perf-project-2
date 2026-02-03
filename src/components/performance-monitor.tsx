@@ -1,8 +1,33 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { onCLS, onFCP, onINP, onLCP, onTTFB } from "web-vitals";
 import { subscribeToApiCalls, getApiCallCount } from "@/lib/api-monitor";
+
+// Pure functions hoisted out of the component — no closure over props/state,
+// no reason to recreate them on every render
+function getRatingColor(rating: string) {
+  switch (rating) {
+    case "good":
+      return "text-green-600 bg-green-50";
+    case "needs-improvement":
+      return "text-yellow-600 bg-yellow-50";
+    case "poor":
+      return "text-red-600 bg-red-50";
+    default:
+      return "text-gray-600 bg-gray-50";
+  }
+}
+
+function formatValue(name: string, value: number) {
+  if (name === "CLS") return value.toFixed(3);
+  return Math.round(value);
+}
+
+function getUnit(name: string) {
+  if (name === "CLS") return "";
+  return "ms";
+}
 
 interface WebVitalsMetric {
   name: string;
@@ -28,10 +53,11 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
   serverLoadTimes,
   serverApiCalls,
 }) => {
+  // rerender-lazy-state-init: initializers run once, not on every render
   const [metrics, setMetrics] = useState<Map<string, WebVitalsMetric>>(
-    new Map()
+    () => new Map(),
   );
-  const [apiCallCount, setApiCallCount] = useState(getApiCallCount());
+  const [apiCallCount, setApiCallCount] = useState(() => getApiCallCount());
   const [pageLoadTime, setPageLoadTime] = useState<number>(0);
   const [domContentLoadedTime, setDomContentLoadedTime] = useState<number>(0);
 
@@ -96,6 +122,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       calculateDOMContentLoadedTime
     );
 
+    // TTFB is already reported by onTTFB() above — no need to duplicate it here.
+    // The previous metrics.has("TTFB") guard was also a stale closure (always saw
+    // the initial empty Map), so it fired on every navigation entry regardless.
     const performanceObserver = new PerformanceObserver((list) => {
       list.getEntries().forEach((entry) => {
         if (entry.entryType === "navigation") {
@@ -107,18 +136,6 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
             loadComplete: navEntry.loadEventEnd - navEntry.loadEventStart,
             ttfb: navEntry.responseStart - navEntry.requestStart,
           });
-
-          if (!metrics.has("TTFB")) {
-            updateMetric({
-              name: "TTFB",
-              value: navEntry.responseStart - navEntry.requestStart,
-              rating: "good",
-              id: "ttfb-nav",
-              delta: 0,
-              entries: [],
-              navigationType: navEntry.type,
-            });
-          }
         }
       });
     });
@@ -135,29 +152,6 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       performanceObserver.disconnect();
     };
   }, [updateMetric]);
-
-  const getRatingColor = (rating: string) => {
-    switch (rating) {
-      case "good":
-        return "text-green-600 bg-green-50";
-      case "needs-improvement":
-        return "text-yellow-600 bg-yellow-50";
-      case "poor":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
-  };
-
-  const formatValue = (name: string, value: number) => {
-    if (name === "CLS") return value.toFixed(3);
-    return Math.round(value);
-  };
-
-  const getUnit = (name: string) => {
-    if (name === "CLS") return "";
-    return "ms";
-  };
 
   return (
     <div className="fixed bottom-4 right-4 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm z-50">

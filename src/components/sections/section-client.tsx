@@ -1,150 +1,98 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { JobCard } from "@/components/ui/job-card";
-import axios from "axios";
+
+// rendering-hoist-jsx: static skeleton extracted outside the component
+const LOADING_SKELETON = (
+  <section className="py-12 bg-gray-50">
+    <div className="container mx-auto px-4">
+      <h2 className="text-3xl font-bold text-center mb-8">
+        Client-Side Rendered Jobs
+      </h2>
+      <div className="h-12 bg-gray-200 rounded mb-4" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} className="p-6 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded mb-4"></div>
+            <div className="h-3 bg-gray-200 rounded mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded mb-2"></div>
+            <div className="h-3 bg-gray-200 rounded"></div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  </section>
+);
 
 export const SectionClient = () => {
   const [duration, setDuration] = useState<number>(0);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
+  const [searchResults, setSearchResults] = useState<Job[]>([]);
   const [sortBy, setSortBy] = useState<string>("newest");
   const [filterQuery, setFilterQuery] = useState<string>("");
+  const fetchStart = useRef<number>(0);
 
   const { data: allJobs = [], isLoading } = useQuery({
     queryKey: ["jobs-client"],
     queryFn: async () => {
-      const start = performance.now();
-
+      fetchStart.current = performance.now();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`);
-      const json = await res.json();
-
-      for (const job of json.slice(0, 6)) {
-        try {
-          const detailsRes = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-          );
-          const jobDetails = detailsRes.data.find((j: Job) => j.id === job.id);
-          console.log(`Refetched details for job: ${jobDetails?.role}`);
-        } catch {
-          console.log("Failed to refetch job details");
-        }
-      }
-
-      const end = performance.now();
-      setDuration(end - start);
-      return json;
+      return res.json();
     },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
   });
 
+  // rerender-move-effect-to-event: duration measured outside queryFn
   useEffect(() => {
-    if (allJobs.length > 0) {
-      const fetchAndProcess = async () => {
-        try {
-          const res = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-          );
-          const jobs = res.data;
-
-          let processed = jobs.filter((_: Job, index: number) => index < 6);
-
-          if (sortBy === "company") {
-            processed = processed.sort((a: Job, b: Job) =>
-              a.companyName.localeCompare(b.companyName)
-            );
-          } else if (sortBy === "position") {
-            const positionOrder = { Junior: 1, Mid: 2, Senior: 3 };
-            processed = processed.sort(
-              (a: Job, b: Job) =>
-                (positionOrder[a.position as keyof typeof positionOrder] || 0) -
-                (positionOrder[b.position as keyof typeof positionOrder] || 0)
-            );
-          }
-
-          setFilteredJobs(processed);
-        } catch {
-          console.log("Processing failed");
-        }
-      };
-
-      fetchAndProcess();
+    if (!isLoading) {
+      setDuration(performance.now() - fetchStart.current);
     }
+  }, [isLoading]);
+
+  // rerender-derived-state-no-effect: sorted jobs derived from existing
+  // state — no re-fetch, no effect
+  const sortedJobs = useMemo(() => {
+    const sliced = allJobs.slice(0, 6);
+    if (sortBy === "company") {
+      return [...sliced].sort((a: Job, b: Job) =>
+        a.companyName.localeCompare(b.companyName),
+      );
+    }
+    if (sortBy === "position") {
+      const positionOrder = { Junior: 1, Mid: 2, Senior: 3 };
+      return [...sliced].sort(
+        (a: Job, b: Job) =>
+          (positionOrder[a.position as keyof typeof positionOrder] || 0) -
+          (positionOrder[b.position as keyof typeof positionOrder] || 0),
+      );
+    }
+    return sliced;
   }, [allJobs, sortBy]);
 
-  useEffect(() => {
-    const handleSearch = (event: CustomEvent) => {
-      const fetchFilteredJobs = async () => {
-        const { queryString } = event.detail;
+  // async-parallel: single fetch, no N+1 loop
+  const handleSearch = async () => {
+    const queryParams = new URLSearchParams();
+    if (filterQuery) queryParams.append("role", filterQuery);
+    const url = queryParams.toString()
+      ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?${queryParams}`
+      : `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`;
 
-        const apiUrl = queryString
-          ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?${queryString}`
-          : `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`;
+    try {
+      const res = await fetch(url);
+      const jobs: Job[] = await res.json();
+      setSearchResults(jobs.slice(0, 6));
+    } catch (error) {
+      console.error("Search failed:", error);
+      setSearchResults([]);
+    }
+  };
 
-        try {
-          const res = await axios.get(apiUrl);
-          const jobs: Job[] = res.data;
-
-          for (const job of jobs.slice(0, 6)) {
-            const categoryRes = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-            );
-            const allJobs: Job[] = categoryRes.data;
-            const sameCategory = allJobs.filter(
-              (j: Job) => j.category === job.category
-            );
-            console.log(
-              `Job ${job.role} has ${sameCategory.length} jobs in same category`
-            );
-          }
-
-          setFilteredJobs(jobs.slice(0, 6));
-        } catch (error) {
-          console.error("Search failed:", error);
-          setFilteredJobs(allJobs.slice(0, 6));
-        }
-      };
-
-      fetchFilteredJobs();
-    };
-
-    const handleSort = (event: CustomEvent) => {
-      setSortBy(event.detail.sortBy);
-    };
-
-    window.addEventListener("jobSearch", handleSearch as EventListener);
-    window.addEventListener("jobSort", handleSort as EventListener);
-
-    return () => {
-      window.removeEventListener("jobSearch", handleSearch as EventListener);
-      window.removeEventListener("jobSort", handleSort as EventListener);
-    };
-  }, [allJobs]);
+  const displayedJobs = searchResults.length > 0 ? searchResults : sortedJobs;
 
   if (isLoading) {
-    return (
-      <section className="py-12 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-8">
-            Client-Side Rendered Jobs
-          </h2>
-          <div className="h-12 bg-gray-200 rounded mb-4" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="p-6 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded"></div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
+    return LOADING_SKELETON;
   }
 
   if (!allJobs || allJobs.length === 0) {
@@ -176,13 +124,10 @@ export const SectionClient = () => {
             <select
               id="sort-by"
               value={sortBy}
-              onChange={(e) =>
-                window.dispatchEvent(
-                  new CustomEvent("jobSort", {
-                    detail: { sortBy: e.target.value },
-                  })
-                )
-              }
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setSearchResults([]);
+              }}
               className="border rounded px-2 py-1"
             >
               <option value="newest">Najnowsze</option>
@@ -200,48 +145,28 @@ export const SectionClient = () => {
             />
           </div>
           <button
-            onClick={() => {
-              const queryParams = new URLSearchParams();
-              if (filterQuery) queryParams.append("role", filterQuery);
-              window.dispatchEvent(
-                new CustomEvent("jobSearch", {
-                  detail: { queryString: queryParams.toString() },
-                })
-              );
-            }}
+            onClick={handleSearch}
             className="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition-colors font-semibold"
           >
             Filtruj
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(filteredJobs.length > 0 ? filteredJobs : allJobs.slice(0, 6)).map(
-            (job: Job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                variant="client"
-                showMetadata={true}
-                metadata={{
-                  renderType: "CSR - Client Side Rendered",
-                }}
-                buttonText="See offer"
-                onApply={async (job) => {
-                  try {
-                    const res = await axios.get(
-                      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-                    );
-                    const jobDetails = res.data.find(
-                      (j: Job) => j.id === job.id
-                    );
-                    console.log(`Viewing offer: ${jobDetails?.role}`);
-                  } catch {
-                    console.log("API call failed");
-                  }
-                }}
-              />
-            )
-          )}
+          {displayedJobs.map((job: Job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              variant="client"
+              showMetadata={true}
+              metadata={{
+                renderType: "CSR - Client Side Rendered",
+              }}
+              buttonText="See offer"
+              onApply={(job) => {
+                console.log(`Viewing offer: ${job.role}`);
+              }}
+            />
+          ))}
         </div>
       </div>
     </section>
