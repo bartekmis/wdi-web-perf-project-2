@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import axios from "axios";
+import { useState, useEffect, useCallback } from "react";
 import { Route } from "@/types/navbar";
 import { Job } from "@/types/job";
 import Link from "next/link";
@@ -10,29 +9,28 @@ export const Navbar = () => {
   const [items, setItems] = useState<Route[]>([]);
   const [loading, setLoading] = useState(true);
   const [jobCategories, setJobCategories] = useState<string[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
 
   useEffect(() => {
     const fetchNavItems = async () => {
       try {
         setLoading(true);
 
-        const navResponse = await axios.get("/api/navigation");
-        setItems(navResponse.data);
+        // Parallel fetching - both requests happen simultaneously
+        const [navResponse, jobsResponse] = await Promise.all([
+          fetch("/api/navigation").then((res) => res.json()),
+          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`).then((res) =>
+            res.json(),
+          ),
+        ]);
 
-        const jobsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`,
-        );
-        const jobs = jobsResponse.data as Job[];
+        setItems(navResponse);
 
-        const categories = [...new Set(jobs.map((job: Job) => job.category))];
+        const jobsData = jobsResponse as Job[];
+        setJobs(jobsData);
+
+        const categories = [...new Set(jobsData.map((job: Job) => job.category))];
         setJobCategories(categories);
-
-        for (const category of categories) {
-          const categoryJobs = jobs.filter(
-            (job: Job) => job.category === category,
-          );
-          console.log(`Category ${category}: ${categoryJobs.length} jobs`);
-        }
 
         setLoading(false);
       } catch (error) {
@@ -44,22 +42,19 @@ export const Navbar = () => {
     fetchNavItems();
   }, []);
 
-  const handleItemHover = async (item: Route) => {
-    try {
-      const jobsResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`,
-      );
-      const categoryJobs = jobsResponse.data.filter(
+  const handleItemHover = useCallback(
+    (item: Route) => {
+      // Use cached jobs data - no API call needed
+      const categoryJobs = jobs.filter(
         (job: Job) =>
           job.category === item.label || item.label.includes(job.category),
       );
       console.log(
         `Hovered ${item.label}: Found ${categoryJobs.length} related jobs`,
       );
-    } catch {
-      console.log("Hover job fetch failed");
-    }
-  };
+    },
+    [jobs],
+  );
 
   if (loading) {
     return (

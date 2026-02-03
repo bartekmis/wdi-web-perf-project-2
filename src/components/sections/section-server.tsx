@@ -1,46 +1,39 @@
 import { JobCard } from "@/components/ui/job-card";
 import { Job } from "@/types/job";
+import { cache } from "react";
 
 let serverApiCallCount = 0;
 
-async function fetchJobs() {
+// ✅ FIXED: Wrapped with React.cache() for per-request deduplication
+const fetchJobs = cache(async () => {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
     {
-      cache: "no-store",
+      next: { revalidate: 60 }, // ✅ FIXED: Cache for 60 seconds instead of no-store
     }
   );
   if (!res.ok) {
     throw new Error("Failed to fetch jobs");
   }
   return res.json();
-}
+});
 
-async function fetchAllJobsForCategories() {
-  serverApiCallCount++;
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
-    {
-      cache: "no-store",
-    }
-  );
-  if (!res.ok) {
-    throw new Error("Failed to fetch jobs");
-  }
-  return res.json();
-}
+// ✅ FIXED: Removed fetchAllJobsForCategories - no longer needed
+// We'll derive categories from the 6 jobs we already fetch
 
 export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
+  // ✅ FIXED: Only one fetch needed - derive categories from existing data
   const jobsData = await fetchJobs();
-  const categoriesData = await fetchAllJobsForCategories();
 
   const jobs: Job[] = jobsData;
+
+  // ✅ FIXED: Derive categories from the 6 jobs instead of fetching 24 more
   const categories = [
-    ...new Set(categoriesData.map((job: Job) => job.category)),
+    ...new Set(jobs.map((job: Job) => job.category)),
   ];
   console.log(`[SERVER] Processed ${categories.length} categories.`);
 

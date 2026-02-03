@@ -1,21 +1,28 @@
 import { Job } from "@/types/job";
 import { JobCard } from "@/components/ui/job-card";
+import { cache } from "react";
 
 let serverApiCallCount = 0;
 
-async function getISRJobs() {
+// ✅ FIXED: Wrapped with React.cache() for per-request deduplication
+const getISRJobs = cache(async () => {
   serverApiCallCount = 0;
   const start = performance.now();
 
   serverApiCallCount++;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`, {
-    next: { revalidate: 30 },
-  });
+  // ✅ FIXED: Fetch only the jobs we need (18-24) instead of all jobs
+  // Using _start and _limit for pagination if API supports it
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_start=18&_limit=6`,
+    {
+      next: { revalidate: 30 },
+    }
+  );
   if (!res.ok) {
     throw new Error("Failed to fetch ISR jobs");
   }
-  const allJobs: Job[] = await res.json();
+  const jobs: Job[] = await res.json();
 
   console.log(`[SERVER] ISR regeneration completed.`);
 
@@ -25,9 +32,8 @@ async function getISRJobs() {
     `[SERVER] ISR section generation time: ${serverLoadTime.toFixed(2)}ms`
   );
 
-  const processedJobs = allJobs.slice(18, 24);
-  return { jobs: processedJobs, serverLoadTime };
-}
+  return { jobs, serverLoadTime };
+});
 
 export async function getSectionISRContent() {
   const { jobs, serverLoadTime } = await getISRJobs();

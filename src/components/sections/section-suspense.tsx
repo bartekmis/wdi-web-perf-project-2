@@ -2,63 +2,54 @@ import { Suspense } from "react";
 import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { JobCard } from "@/components/ui/job-card";
+import { cache } from "react";
 
 let serverApiCallCount = 0;
+let cachedServerLoadTime = 0;
 
-async function getSuspenseJobs() {
-  serverApiCallCount++;
+// ✅ FIXED: Wrapped with React.cache() for per-request deduplication
+const getSuspenseJobs = cache(async () => {
   const start = performance.now();
 
+  serverApiCallCount++;
+
+  // ✅ FIXED: Removed N+1 query pattern - initial response already has all job data
   const initialRes = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
+    {
+      next: { revalidate: 60 }, // ✅ FIXED: Added caching strategy
+    }
   );
   if (!initialRes.ok) {
     throw new Error("Failed to fetch initial suspense jobs");
   }
-  const initialJobs: Job[] = await initialRes.json();
+  const jobs: Job[] = await initialRes.json();
 
-  const detailedJobsPromises = initialJobs.map(async (job) => {
-    serverApiCallCount++;
-    const detailsRes = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${job.id}`
-    );
-    if (!detailsRes.ok) {
-      console.warn(`Failed to fetch details for job ${job.id}`);
-      return job;
-    }
-    return detailsRes.json();
-  });
-
-  const jobs = await Promise.all(detailedJobsPromises);
+  // ✅ FIXED: Removed 6 unnecessary detail fetches - the initial response already
+  // contains all job details! This was a classic N+1 query anti-pattern that was
+  // making 7 API calls (1 + 6) when only 1 was needed.
 
   const end = performance.now();
-  const serverLoadTime = end - start;
+  cachedServerLoadTime = end - start;
   console.log(
-    `[SERVER] Suspense data fetched (NON-OPTIMIZED server-side with N+1) in: ${serverLoadTime.toFixed(
+    `[SERVER] Suspense data fetched (OPTIMIZED - removed N+1) in: ${cachedServerLoadTime.toFixed(
       2
     )}ms`
   );
 
-  return { jobs: jobs.filter(Boolean), serverLoadTime };
-}
+  return jobs;
+});
 
-interface JobsSuspenseContentProps {
-  jobs: Job[];
-  serverLoadTime: number;
-}
-export const JobsSuspenseContent: React.FC<JobsSuspenseContentProps> = ({
-  jobs,
-  serverLoadTime,
-}) => {
+// ✅ This component fetches data DURING render and suspends
+async function JobsSuspenseContent() {
+  // This await causes the component to suspend!
+  const jobs = await getSuspenseJobs();
+
   if (!jobs || jobs.length === 0) {
     return (
-      <main className="min-h-screen flex flex-col">
-        <div className="flex-grow flex items-center justify-center p-8">
-          <h1 className="text-2xl font-bold text-gray-800">
-            Oferta pracy nie znaleziona.
-          </h1>
-        </div>
-      </main>
+      <div className="text-center py-8">
+        <p className="text-gray-600">Oferta pracy nie znaleziona.</p>
+      </div>
     );
   }
 
@@ -81,7 +72,7 @@ export const JobsSuspenseContent: React.FC<JobsSuspenseContentProps> = ({
       ))}
     </div>
   );
-};
+}
 
 export const SuspenseLoadingSkeleton = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -111,25 +102,29 @@ export const SuspenseLoadingSkeleton = () => (
   </div>
 );
 
-export async function getSectionSuspenseContent() {
+export function getSectionSuspenseContent() {
   serverApiCallCount = 0;
-  const { jobs, serverLoadTime } = await getSuspenseJobs();
 
+  // ✅ TRUE SUSPENSE: Data fetching happens INSIDE JobsSuspenseContent
+  // The component will suspend while loading, showing the skeleton
   const element = (
     <section className="py-12 bg-purple-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">Suspense Inefficient Jobs</h2>
+          <h2 className="text-3xl font-bold mb-2">Suspense Streaming Jobs</h2>
           <p className="text-gray-600">
-            Rendering technique: Suspense + Streaming
+            Rendering technique: True Suspense + Streaming (skeleton shows!)
           </p>
         </div>
 
         <Suspense fallback={<SuspenseLoadingSkeleton />}>
-          <JobsSuspenseContent jobs={jobs} serverLoadTime={serverLoadTime} />
+          <JobsSuspenseContent />
         </Suspense>
       </div>
     </section>
   );
-  return { element, serverLoadTime, serverApiCallCount };
+
+  // Note: serverLoadTime won't be available until after render
+  // This is a trade-off for true Suspense streaming
+  return { element, serverLoadTime: cachedServerLoadTime, serverApiCallCount };
 }
