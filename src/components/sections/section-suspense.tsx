@@ -1,52 +1,39 @@
 import { Suspense } from "react";
+import { cache } from "react";
 import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { JobCard } from "@/components/ui/job-card";
 
-let serverApiCallCount = 0;
-
-async function getSuspenseJobs() {
-  serverApiCallCount++;
+// Use React.cache() for per-request deduplication
+// Fixed: Single request instead of N+1 queries (was 7 requests, now 1)
+const fetchSuspenseJobs = cache(async () => {
   const start = performance.now();
 
-  const initialRes = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
+    { cache: "no-store" } // SSR behavior for suspense streaming
   );
-  if (!initialRes.ok) {
-    throw new Error("Failed to fetch initial suspense jobs");
+  if (!res.ok) {
+    throw new Error("Failed to fetch suspense jobs");
   }
-  const initialJobs: Job[] = await initialRes.json();
-
-  const detailedJobsPromises = initialJobs.map(async (job) => {
-    serverApiCallCount++;
-    const detailsRes = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${job.id}`
-    );
-    if (!detailsRes.ok) {
-      console.warn(`Failed to fetch details for job ${job.id}`);
-      return job;
-    }
-    return detailsRes.json();
-  });
-
-  const jobs = await Promise.all(detailedJobsPromises);
+  const jobs: Job[] = await res.json();
 
   const end = performance.now();
   const serverLoadTime = end - start;
   console.log(
-    `[SERVER] Suspense data fetched (NON-OPTIMIZED server-side with N+1) in: ${serverLoadTime.toFixed(
+    `[SERVER] Suspense data fetched (OPTIMIZED - single request) in: ${serverLoadTime.toFixed(
       2
     )}ms`
   );
 
-  return { jobs: jobs.filter(Boolean), serverLoadTime };
-}
+  return { jobs, serverLoadTime, serverApiCallCount: 1 };
+});
 
 interface JobsSuspenseContentProps {
   jobs: Job[];
   serverLoadTime: number;
 }
-export const JobsSuspenseContent: React.FC<JobsSuspenseContentProps> = ({
+const JobsSuspenseContent: React.FC<JobsSuspenseContentProps> = ({
   jobs,
   serverLoadTime,
 }) => {
@@ -63,23 +50,28 @@ export const JobsSuspenseContent: React.FC<JobsSuspenseContentProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {jobs.map((job: Job, index: number) => (
-        <JobCard
-          key={job.id}
-          job={job}
-          variant="suspense"
-          showBenefits={true}
-          maxBenefits={2}
-          buttonText="See offer"
-          showMetadata={true}
-          metadata={{
-            index,
-            renderType: "Suspense + Streaming",
-          }}
-        />
-      ))}
-    </div>
+    <>
+      <p className="text-xs text-gray-500 text-center mb-4">
+        Server data load time: {serverLoadTime.toFixed(2)}ms
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {jobs.map((job: Job, index: number) => (
+          <JobCard
+            key={job.id}
+            job={job}
+            variant="suspense"
+            showBenefits={true}
+            maxBenefits={2}
+            buttonText="See offer"
+            showMetadata={true}
+            metadata={{
+              index,
+              renderType: "Suspense + Streaming",
+            }}
+          />
+        ))}
+      </div>
+    </>
   );
 };
 
@@ -111,25 +103,31 @@ export const SuspenseLoadingSkeleton = () => (
   </div>
 );
 
-export async function getSectionSuspenseContent() {
-  serverApiCallCount = 0;
-  const { jobs, serverLoadTime } = await getSuspenseJobs();
+// Async component that fetches its own data - enables true Suspense streaming
+async function JobsSuspenseLoader() {
+  const { jobs, serverLoadTime } = await fetchSuspenseJobs();
+  return <JobsSuspenseContent jobs={jobs} serverLoadTime={serverLoadTime} />;
+}
 
-  const element = (
+// Export the async loader and skeleton for the page to use directly
+export { JobsSuspenseLoader };
+
+// Section wrapper - does NOT await, just renders Suspense boundary
+export function SectionSuspense() {
+  return (
     <section className="py-12 bg-purple-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">Suspense Inefficient Jobs</h2>
+          <h2 className="text-3xl font-bold mb-2">Suspense Optimized Jobs</h2>
           <p className="text-gray-600">
             Rendering technique: Suspense + Streaming
           </p>
         </div>
 
         <Suspense fallback={<SuspenseLoadingSkeleton />}>
-          <JobsSuspenseContent jobs={jobs} serverLoadTime={serverLoadTime} />
+          <JobsSuspenseLoader />
         </Suspense>
       </div>
     </section>
   );
-  return { element, serverLoadTime, serverApiCallCount };
 }

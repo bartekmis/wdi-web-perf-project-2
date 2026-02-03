@@ -1,9 +1,11 @@
+import { cache } from "react";
 import { JobCard } from "@/components/ui/job-card";
 import { Job } from "@/types/job";
 
 let serverApiCallCount = 0;
 
-async function fetchJobs() {
+// Use React.cache() for per-request deduplication
+const fetchJobs = cache(async () => {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
@@ -15,9 +17,9 @@ async function fetchJobs() {
     throw new Error("Failed to fetch jobs");
   }
   return res.json();
-}
+});
 
-async function fetchAllJobsForCategories() {
+const fetchAllJobsForCategories = cache(async () => {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
@@ -29,14 +31,17 @@ async function fetchAllJobsForCategories() {
     throw new Error("Failed to fetch jobs");
   }
   return res.json();
-}
+});
 
 export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
-  const jobsData = await fetchJobs();
-  const categoriesData = await fetchAllJobsForCategories();
+  // Parallel fetching with Promise.all() - eliminates waterfall (2x faster)
+  const [jobsData, categoriesData] = await Promise.all([
+    fetchJobs(),
+    fetchAllJobsForCategories(),
+  ]);
 
   const jobs: Job[] = jobsData;
   const categories = [

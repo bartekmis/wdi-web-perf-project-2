@@ -1,21 +1,23 @@
+import { Suspense, cache } from "react";
 import { Job } from "@/types/job";
 import { JobCard } from "@/components/ui/job-card";
+import { Card } from "@/components/ui/card";
 
-let serverApiCallCount = 0;
-
-async function getISRJobs() {
-  serverApiCallCount = 0;
-  const start = performance.now();
-
-  serverApiCallCount++;
-
+// Use React.cache() for per-request deduplication of the fetch function
+const fetchISRJobs = cache(async () => {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`, {
-    next: { revalidate: 30 },
+    next: { revalidate: 30 }, // ISR: revalidate every 30 seconds
   });
   if (!res.ok) {
     throw new Error("Failed to fetch ISR jobs");
   }
-  const allJobs: Job[] = await res.json();
+  return res.json() as Promise<Job[]>;
+});
+
+async function getISRJobs() {
+  const start = performance.now();
+
+  const allJobs = await fetchISRJobs();
 
   console.log(`[SERVER] ISR regeneration completed.`);
 
@@ -26,10 +28,36 @@ async function getISRJobs() {
   );
 
   const processedJobs = allJobs.slice(18, 24);
-  return { jobs: processedJobs, serverLoadTime };
+  return { jobs: processedJobs, serverLoadTime, serverApiCallCount: 1 };
 }
 
-export async function getSectionISRContent() {
+// Skeleton component for ISR loading state
+export const ISRLoadingSkeleton = () => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {Array.from({ length: 6 }).map((_, i) => (
+      <Card key={i} className="p-6 border-2 border-orange-200">
+        <div className="animate-pulse space-y-4">
+          <div className="flex justify-between">
+            <div className="space-y-2 flex-1">
+              <div className="h-4 bg-orange-200 rounded w-3/4"></div>
+              <div className="h-3 bg-orange-200 rounded w-1/2"></div>
+            </div>
+            <div className="h-6 bg-orange-200 rounded w-16"></div>
+          </div>
+          <div className="space-y-2">
+            <div className="h-3 bg-orange-200 rounded w-full"></div>
+            <div className="h-3 bg-orange-200 rounded w-5/6"></div>
+            <div className="h-3 bg-orange-200 rounded w-4/6"></div>
+          </div>
+          <div className="h-10 bg-orange-200 rounded w-full"></div>
+        </div>
+      </Card>
+    ))}
+  </div>
+);
+
+// Async component that fetches inside Suspense boundary - enables skeleton
+async function ISRJobsLoader() {
   const { jobs, serverLoadTime } = await getISRJobs();
 
   const timestamp = new Date().toLocaleString("pl-PL", {
@@ -42,73 +70,81 @@ export async function getSectionISRContent() {
     second: "2-digit",
   });
 
-  const element = (
+  if (!jobs || jobs.length === 0) {
+    return (
+      <div className="flex-grow flex items-center justify-center p-8">
+        <h1 className="text-2xl font-bold text-gray-800">
+          Oferta pracy nie znaleziona.
+        </h1>
+      </div>
+    );
+  }
+
+  return (
     <>
-      {(!jobs || jobs.length === 0) && (
-        <main className="min-h-screen flex flex-col">
-          <div className="flex-grow flex items-center justify-center p-8">
-            <h1 className="text-2xl font-bold text-gray-800">
-              Oferta pracy nie znaleziona.
-            </h1>
-          </div>
-        </main>
-      )}
-      <section className="py-12 bg-orange-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2">ISR Revalidated Jobs</h2>
-            <p className="text-gray-600">
-              Rendering technique: ISR (30s revalidation)
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Last generated: {timestamp}
-            </p>
-            <p className="text-xs text-gray-500 mt-2">
-              Server data load time: {serverLoadTime.toFixed(2)}ms
-            </p>
-          </div>
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold mb-2">ISR Revalidated Jobs</h2>
+        <p className="text-gray-600">
+          Rendering technique: ISR (30s revalidation)
+        </p>
+        <p className="text-xs text-gray-500 mt-2">
+          Last generated: {timestamp}
+        </p>
+        <p className="text-xs text-gray-500 mt-2">
+          Server data load time: {serverLoadTime.toFixed(2)}ms
+        </p>
+      </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {jobs.map((job: Job, index: number) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                variant="isr"
-                showBenefits={true}
-                maxBenefits={3}
-                buttonText="See offer"
-                showMetadata={true}
-                metadata={{
-                  index,
-                  renderType: "ISR - Revalidates every 30 seconds",
-                }}
-              />
-            ))}
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {jobs.map((job: Job, index: number) => (
+          <JobCard
+            key={job.id}
+            job={job}
+            variant="isr"
+            showBenefits={true}
+            maxBenefits={3}
+            buttonText="See offer"
+            showMetadata={true}
+            metadata={{
+              index,
+              renderType: "ISR - Revalidates every 30 seconds",
+            }}
+          />
+        ))}
+      </div>
 
-          <div className="mt-8 text-center bg-orange-100 p-4 rounded-lg">
-            <h3 className="font-semibold text-orange-800 mb-2">
-              ISR Performance Info
-            </h3>
-            <div className="text-sm text-orange-700 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <p className="font-medium">Revalidation:</p>
-                <p>Every 30 s</p>
-              </div>
-              <div>
-                <p className="font-medium">Cache Status:</p>
-                <p>Static until stale, then regenerated in background</p>
-              </div>
-              <div>
-                <p className="font-medium">Build Time:</p>
-                <p>On-demand (after revalidation period)</p>
-              </div>
-            </div>
+      <div className="mt-8 text-center bg-orange-100 p-4 rounded-lg">
+        <h3 className="font-semibold text-orange-800 mb-2">
+          ISR Performance Info
+        </h3>
+        <div className="text-sm text-orange-700 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="font-medium">Revalidation:</p>
+            <p>Every 30 s</p>
+          </div>
+          <div>
+            <p className="font-medium">Cache Status:</p>
+            <p>Static until stale, then regenerated in background</p>
+          </div>
+          <div>
+            <p className="font-medium">Build Time:</p>
+            <p>On-demand (after revalidation period)</p>
           </div>
         </div>
-      </section>
+      </div>
     </>
   );
+}
 
-  return { element, serverLoadTime, serverApiCallCount };
+// Section wrapper - does NOT await, renders Suspense boundary directly
+export function SectionISR() {
+  return (
+    <section className="py-12 bg-orange-50">
+      <div className="container mx-auto px-4">
+        <Suspense fallback={<ISRLoadingSkeleton />}>
+          <ISRJobsLoader />
+        </Suspense>
+      </div>
+    </section>
+  );
 }

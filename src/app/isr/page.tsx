@@ -1,16 +1,7 @@
-import { PerformanceMonitor } from "@/components/performance-monitor";
-import { getSectionISRContent } from "@/components/sections/section-isr";
+import { SectionISR } from "@/components/sections/section-isr";
 
-export default async function ISRPage() {
-  const { element, serverLoadTime, serverApiCallCount } = await getSectionISRContent();
+export const revalidate = 30; // ISR: Revalidate this page every 30 seconds
 
-  return (
-    <>
-      {element}
-      <PerformanceMonitor
-        serverLoadTimes={{ isr: serverLoadTime }}
-        serverApiCalls={serverApiCallCount}
-      />
-    </>
-  );
+export default function ISRPage() {
+  return <SectionISR />;
 }
