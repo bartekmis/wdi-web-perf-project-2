@@ -15,7 +15,7 @@ on:
     #- wdi-training-lance-vance.online
     #- wdi-training-niko-bellic.online
     #- wdi-training-roman-bellic.online
-    #- wdi-training-hernandez.online
+    - wdi-training-hernandez.online
     #- wdi-training-ammu-nation-clerk.online
     #- wdi-training-johnny-klebitz.online
     #- wdi-training-patrick-mcreary.online
