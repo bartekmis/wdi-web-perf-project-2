@@ -5,6 +5,7 @@ import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { saveVisitedJob } from "@/components/last-visited-banner";
 import { cn } from "@/lib/utils";
+import { memo } from "react";
 
 export type JobCardVariant =
   | "client"
@@ -109,7 +110,7 @@ const variantConfig = {
   },
 };
 
-export const JobCard = ({
+export const JobCard = memo(({
   job,
   variant = "default",
   showMetadata = false,
@@ -126,15 +127,13 @@ export const JobCard = ({
   const config = variantConfig[variant];
 
   const handleApply = (e: React.MouseEvent) => {
-    console.log(`Viewing offer: ${job.role} at ${job.companyName}`);
-
     if (onApply) {
       onApply(job);
     }
   };
+
   const handleJobClick = () => {
     saveVisitedJob(job);
-    console.log(`Job visited: ${job.role} at ${job.companyName}`);
 
     if (onJobClick) {
       onJobClick(job);
@@ -246,4 +245,6 @@ export const JobCard = ({
       )}
     </Card>
   );
-};
+});
+
+JobCard.displayName = "JobCard";

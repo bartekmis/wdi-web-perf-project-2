@@ -37,8 +37,6 @@ export const LastVisitedBanner = () => {
     return null;
   }
 
-  console.log("Visited Jobs:", visitedJobs);
-
   return (
     <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 shadow-sm">
       <div className="flex items-center justify-between">
@@ -81,6 +79,9 @@ export const LastVisitedBanner = () => {
   );
 };
 
+// Cache to avoid repeated localStorage reads
+let cachedVisitedJobs: VisitedJob[] | null = null;
+
 export const saveVisitedJob = (job: Job) => {
   if (typeof window === "undefined") return;
 
@@ -91,14 +92,31 @@ export const saveVisitedJob = (job: Job) => {
     visitedAt: new Date().toISOString(),
   };
 
-  const existing = localStorage.getItem("visitedJobs");
-  let visitedJobs: VisitedJob[] = existing ? JSON.parse(existing) : [];
+  // Use cached value if available
+  let visitedJobs: VisitedJob[];
+  if (cachedVisitedJobs === null) {
+    const existing = localStorage.getItem("visitedJobs");
+    visitedJobs = existing ? JSON.parse(existing) : [];
+  } else {
+    visitedJobs = [...cachedVisitedJobs];
+  }
 
   visitedJobs = visitedJobs.filter((j) => j.id !== job.id);
-
   visitedJobs.unshift(visitedJob);
-
   visitedJobs = visitedJobs.slice(0, 10);
 
-  localStorage.setItem("visitedJobs", JSON.stringify(visitedJobs));
+  // Update cache and localStorage
+  cachedVisitedJobs = visitedJobs;
+
+  // Use requestIdleCallback to defer localStorage write
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      localStorage.setItem("visitedJobs", JSON.stringify(visitedJobs));
+    });
+  } else {
+    // Fallback for browsers without requestIdleCallback
+    setTimeout(() => {
+      localStorage.setItem("visitedJobs", JSON.stringify(visitedJobs));
+    }, 0);
+  }
 };

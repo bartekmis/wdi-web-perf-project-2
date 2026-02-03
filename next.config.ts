@@ -22,7 +22,10 @@ const nextConfig: NextConfig = {
         pathname: "/**",
       },
     ],
-  }
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-checkbox', '@radix-ui/react-label'],
+  },
 };
 
 export default nextConfig;
