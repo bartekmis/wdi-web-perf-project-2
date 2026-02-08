@@ -31,18 +31,48 @@ async function fetchAllJobsForCategories() {
   return res.json();
 }
 
+async function fetchFeaturedProfessionals() {
+  const allUsers: {
+    firstName: string;
+    lastName: string;
+    image: string;
+    company: { name: string };
+  }[] = [];
+
+  for (let page = 0; page < 5; page++) {
+    serverApiCallCount++;
+    const res = await fetch(
+      `https://dummyjson.com/users?limit=30&skip=${page * 30}`,
+      { cache: "no-store" }
+    );
+    if (!res.ok) throw new Error("Failed to fetch featured professionals");
+    const data = await res.json();
+    allUsers.push(...data.users);
+  }
+
+  return allUsers.slice(0, 5).map((user) => ({
+    name: `${user.firstName} ${user.lastName}`,
+    image: user.image,
+    company: user.company.name,
+  }));
+}
+
 export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
   const jobsData = await fetchJobs();
   const categoriesData = await fetchAllJobsForCategories();
+  const featuredProfessionals = await fetchFeaturedProfessionals();
 
   const jobs: Job[] = jobsData;
   const categories = [
     ...new Set(categoriesData.map((job: Job) => job.category)),
   ];
   console.log(`[SERVER] Processed ${categories.length} categories.`);
+  console.log(
+    `[SERVER] Featured professionals: fetched 150 users in 5 sequential requests to display ${featuredProfessionals.length}`
+  );
 
   const end = performance.now();
   const serverLoadTime = end - start;
@@ -73,6 +103,38 @@ export async function getSectionServerContent() {
 
             <p className="text-xs text-gray-500 mt-2">
               Server data load time: {serverLoadTime.toFixed(2)}ms
+            </p>
+          </div>
+
+          <div className="mb-8 rounded-lg border border-gray-200 bg-gray-50 p-6">
+            <p className="text-sm font-semibold text-gray-700 mb-3">
+              Featured Professionals
+            </p>
+            <div className="flex items-center gap-4">
+              {featuredProfessionals.map(
+                (
+                  person: { name: string; image: string; company: string },
+                  i: number
+                ) => (
+                  <div key={i} className="flex flex-col items-center gap-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={person.image}
+                      alt={person.name}
+                      width={64}
+                      height={64}
+                      className="rounded-full object-cover"
+                    />
+                    <p className="text-xs font-medium text-gray-700">
+                      {person.name}
+                    </p>
+                    <p className="text-xs text-gray-400">{person.company}</p>
+                  </div>
+                )
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">
+              Source: External API (150 records fetched in 5 sequential requests to display 5)
             </p>
           </div>
 
