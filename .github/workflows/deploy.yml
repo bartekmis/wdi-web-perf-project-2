@@ -24,8 +24,8 @@ on:
     #- wdi-training-phil-bell.online
     #- wdi-training-alexandra-chilton.online
     #- wdi-training-michael-de-santa.online
-    - wdi-training-tyler-dixon.online
-    - wdi-training-lazlow.online
+    #- wdi-training-tyler-dixon.online
+    #- wdi-training-lazlow.online
     #- wdi-training-amanda-de-santa.online 
     #- wdi-training-miguel-madrazo.online
 
