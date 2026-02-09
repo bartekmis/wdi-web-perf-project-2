@@ -70,8 +70,17 @@ export default async function RootLayout({
             }
           `
         }} />
+        <link rel="dns-prefetch" href="https://consent.cookiebot.com" />
+        <link rel="preconnect" href="https://consent.cookiebot.com" crossOrigin="anonymous" />
         <meta name="robots" content="noindex, nofollow" />
       </head>
+      <Script
+        id="Cookiebot"
+        src="https://consent.cookiebot.com/uc.js"
+        data-cbid="f274d27f-7d19-4750-a95e-d34ec844a1b3"
+        data-blockingmode="auto"
+        strategy="afterInteractive"
+      />
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
           <Navbar />
