@@ -25,12 +25,13 @@ export default async function RootLayout({
         <meta name="robots" content="noindex, nofollow" />
         <link rel="preload" href="/fonts/inter-regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/inter-bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://consent.cookiebot.com" />
         <Script
           id="Cookiebot"
           src="https://consent.cookiebot.com/uc.js"
           data-cbid="aad5a0df-ab8f-46e2-85aa-8dea47103cdb"
           data-blockingmode="auto"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -51,6 +52,10 @@ export default async function RootLayout({
             h1, h2 {
               font-weight: 700;
             }
+            .grid > * {
+              content-visibility: auto;
+              contain-intrinsic-size: 120px;
+            }
           `
         }}></style>
       </head>
@@ -58,7 +63,7 @@ export default async function RootLayout({
         {gtmId && (
           <Script
             id="gtm-script"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `
                 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
