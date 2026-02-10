@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
 
 		return [
 			{
-				source: "/isr",
+				source: "/(isr|ssr)",
 				headers: [
 					{
 						key: "Cache-Control",
