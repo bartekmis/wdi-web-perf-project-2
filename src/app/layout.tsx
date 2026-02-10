@@ -42,7 +42,6 @@ export default async function RootLayout({
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src={recaptchaScript}></script>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script type="text/javascript" src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
         <script 
           type="text/javascript" 
           dangerouslySetInnerHTML={{
