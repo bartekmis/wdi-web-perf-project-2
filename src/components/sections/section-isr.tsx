@@ -9,13 +9,16 @@ async function getISRJobs() {
 
   serverApiCallCount++;
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`, {
-    next: { revalidate: 30 },
-  });
+  // Optimized: fetch only 6 jobs we need (with offset) instead of ALL jobs
+  // Unified revalidate to 600s to match page-level revalidate
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6&_start=18`,
+    { next: { revalidate: 600 } }
+  );
   if (!res.ok) {
     throw new Error("Failed to fetch ISR jobs");
   }
-  const allJobs: Job[] = await res.json();
+  const jobs: Job[] = await res.json();
 
   console.log(`[SERVER] ISR regeneration completed.`);
 
@@ -25,8 +28,7 @@ async function getISRJobs() {
     `[SERVER] ISR section generation time: ${serverLoadTime.toFixed(2)}ms`
   );
 
-  const processedJobs = allJobs.slice(18, 24);
-  return { jobs: processedJobs, serverLoadTime };
+  return { jobs, serverLoadTime };
 }
 
 export async function getSectionISRContent() {

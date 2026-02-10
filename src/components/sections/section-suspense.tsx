@@ -9,37 +9,25 @@ async function getSuspenseJobs() {
   serverApiCallCount++;
   const start = performance.now();
 
-  const initialRes = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`
+  // Optimized: single request instead of N+1 pattern (1 list + 6 detail requests)
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
+    { next: { revalidate: 60 } }
   );
-  if (!initialRes.ok) {
-    throw new Error("Failed to fetch initial suspense jobs");
+  if (!res.ok) {
+    throw new Error("Failed to fetch suspense jobs");
   }
-  const initialJobs: Job[] = await initialRes.json();
-
-  const detailedJobsPromises = initialJobs.map(async (job) => {
-    serverApiCallCount++;
-    const detailsRes = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${job.id}`
-    );
-    if (!detailsRes.ok) {
-      console.warn(`Failed to fetch details for job ${job.id}`);
-      return job;
-    }
-    return detailsRes.json();
-  });
-
-  const jobs = await Promise.all(detailedJobsPromises);
+  const jobs: Job[] = await res.json();
 
   const end = performance.now();
   const serverLoadTime = end - start;
   console.log(
-    `[SERVER] Suspense data fetched (NON-OPTIMIZED server-side with N+1) in: ${serverLoadTime.toFixed(
+    `[SERVER] Suspense data fetched (OPTIMIZED single request) in: ${serverLoadTime.toFixed(
       2
     )}ms`
   );
 
-  return { jobs: jobs.filter(Boolean), serverLoadTime };
+  return { jobs, serverLoadTime };
 }
 
 interface JobsSuspenseContentProps {
@@ -111,6 +99,13 @@ export const SuspenseLoadingSkeleton = () => (
   </div>
 );
 
+// Optimized: async server component for true Suspense streaming
+export async function SuspenseJobsAsync() {
+  serverApiCallCount = 0;
+  const { jobs, serverLoadTime } = await getSuspenseJobs();
+  return <JobsSuspenseContent jobs={jobs} serverLoadTime={serverLoadTime} />;
+}
+
 export async function getSectionSuspenseContent() {
   serverApiCallCount = 0;
   const { jobs, serverLoadTime } = await getSuspenseJobs();
@@ -119,7 +114,7 @@ export async function getSectionSuspenseContent() {
     <section className="py-12 bg-purple-50">
       <div className="container mx-auto px-4">
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">Suspense Inefficient Jobs</h2>
+          <h2 className="text-3xl font-bold mb-2">Suspense Optimized Jobs</h2>
           <p className="text-gray-600">
             Rendering technique: Suspense + Streaming
           </p>

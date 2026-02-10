@@ -3,6 +3,7 @@ import { OfferPageClient } from "@/components/offer-page-client";
 import { JobCard } from "@/components/ui/job-card";
 import { Job } from "@/types/job";
 import Image from "next/image";
+import { cache } from "react";
 
 interface PageProps {
   params: Promise<{
@@ -10,12 +11,19 @@ interface PageProps {
   }>;
 }
 
-export async function generateStaticParams() {
-  console.log("[BUILD] generateStaticParams: Fetching ALL job IDs for SSG...");
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`);
-    const allJobs: Job[] = await res.json();
+// Optimized: React.cache() for per-request deduplication of fetches
+const getJobs = cache(async (): Promise<Job[]> => {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`, {
+    next: { revalidate: 600 },
+  });
+  if (!res.ok) throw new Error("Failed to fetch jobs");
+  return res.json();
+});
 
+export async function generateStaticParams() {
+  console.log("[BUILD] generateStaticParams: Fetching job IDs for SSG...");
+  try {
+    const allJobs = await getJobs();
     const params = allJobs.slice(0, 100).map((job) => ({
       id: job.id.toString(),
     }));
@@ -29,43 +37,30 @@ export async function generateStaticParams() {
   }
 }
 
+// Optimized: fetch single job by ID instead of fetching ALL and filtering
 async function getOfferForSSG(id: string): Promise<Job | null> {
-  const start = performance.now();
   try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`);
-    if (!res.ok) {
-      throw new Error(`API returned ${res.status} when fetching all jobs.`);
-    }
-    const allJobs: Job[] = await res.json();
-
-    const offer = allJobs.find((j: Job) => j.id === id);
-
-    const end = performance.now();
-    console.log(`[BUILD] getOfferForSSG for ID ${id} took: ${end - start}ms`);
-
-    if (!offer) {
-      console.warn(
-        `[BUILD] Job with ID ${id} not found during SSG generation.`
-      );
-    }
-    return offer || null;
-  } catch (error) {
-    console.error(
-      `[BUILD ERROR] Error fetching job offer for ID ${id}:`,
-      error
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${id}`,
+      { next: { revalidate: 600 } }
     );
+    if (!res.ok) return null;
+    return res.json();
+  } catch (error) {
+    console.error(`[BUILD ERROR] Error fetching job offer for ID ${id}:`, error);
     return null;
   }
 }
 
+// Optimized: fetch only 3 jobs instead of all
 async function getSimilarOffers(): Promise<Job[]> {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`);
-    if (!res.ok) {
-      throw new Error("Failed to fetch similar jobs");
-    }
-    const allJobs: Job[] = await res.json();
-    return allJobs.slice(0, 3);
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=3`,
+      { next: { revalidate: 600 } }
+    );
+    if (!res.ok) throw new Error("Failed to fetch similar jobs");
+    return res.json();
   } catch (error) {
     console.error("Error fetching similar offers:", error);
     return [];
@@ -74,8 +69,11 @@ async function getSimilarOffers(): Promise<Job[]> {
 
 export default async function OfferPage({ params }: PageProps) {
   const { id } = await params;
-  const offer = await getOfferForSSG(id);
-  const similarOffers = await getSimilarOffers();
+  // Optimized: parallel fetching instead of sequential
+  const [offer, similarOffers] = await Promise.all([
+    getOfferForSSG(id),
+    getSimilarOffers(),
+  ]);
 
   if (!offer) {
     return (

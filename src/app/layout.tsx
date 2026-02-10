@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Roboto } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
 
 const inter = Inter({ subsets: ["latin"] });
+
+// Optimized: use next/font/google for Roboto instead of inline @font-face
+// This enables automatic preloading, self-hosting via Next.js, and zero layout shift
+const roboto = Roboto({
+  weight: "700",
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-roboto",
+});
 
 export const metadata: Metadata = {
   title: "Job hunter Performance Demo",
@@ -19,15 +28,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  
+
   return (
-    <html lang="en">
+    <html lang="en" className={roboto.variable}>
       <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <meta name="robots" content="noindex, nofollow" />
+      </head>
+      <body className={inter.className}>
+        {/* Optimized: GTM loaded after hydration instead of sync in <head> */}
         {gtmId && (
-          <script
+          <Script
+            id="gtm-script"
+            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
                 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -39,33 +52,19 @@ export default async function RootLayout({
             }}
           />
         )}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            @font-face {
-              font-family: 'roboto-font';
-              src: url('/fonts/roboto-font.woff2') format('woff2');
-              font-weight: normal;
-              font-style: normal;
-              font-display: swap;
-            }
-
-            h1, h2 {
-              font-family: 'roboto-font', sans-serif;
-              font-weight: 700;
-            }
-          `
-        }} />
-        <meta name="robots" content="noindex, nofollow" />
-      </head>
-      <body className={inter.className}>
+        {/* Optimized: reCAPTCHA deferred to lazyOnload - not needed for initial render */}
+        <Script
+          id="recaptcha-script"
+          src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`}
+          strategy="lazyOnload"
+        />
+        {/* Optimized: Cookiebot changed from beforeInteractive to afterInteractive */}
         <Script
           id="Cookiebot"
           src="https://consent.cookiebot.com/uc.js"
           data-cbid="b927f844-8454-4007-b4d6-1f297a729316"
           data-blockingmode="auto"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
         <div className="min-h-screen flex flex-col">
           <Navbar />

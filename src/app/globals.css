@@ -119,4 +119,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Optimized: using CSS variable from next/font/local instead of inline @font-face */
+  h1, h2 {
+    font-family: var(--font-roboto), sans-serif;
+    font-weight: 700;
+  }
 }

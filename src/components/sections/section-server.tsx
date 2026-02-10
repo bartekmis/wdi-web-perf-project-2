@@ -8,7 +8,7 @@ async function fetchJobs() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
     {
-      cache: "no-store",
+      next: { revalidate: 60 },
     }
   );
   if (!res.ok) {
@@ -22,7 +22,7 @@ async function fetchAllJobsForCategories() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
     {
-      cache: "no-store",
+      next: { revalidate: 60 },
     }
   );
   if (!res.ok) {
@@ -32,25 +32,16 @@ async function fetchAllJobsForCategories() {
 }
 
 async function fetchFeaturedProfessionals() {
-  const allUsers: {
-    firstName: string;
-    lastName: string;
-    image: string;
-    company: { name: string };
-  }[] = [];
+  // Optimized: fetch only 5 users we need instead of 150 in 5 sequential requests
+  serverApiCallCount++;
+  const res = await fetch(
+    `https://dummyjson.com/users?limit=5&select=firstName,lastName,image,company`,
+    { next: { revalidate: 3600 } }
+  );
+  if (!res.ok) throw new Error("Failed to fetch featured professionals");
+  const data = await res.json();
 
-  for (let page = 0; page < 5; page++) {
-    serverApiCallCount++;
-    const res = await fetch(
-      `https://dummyjson.com/users?limit=30&skip=${page * 30}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error("Failed to fetch featured professionals");
-    const data = await res.json();
-    allUsers.push(...data.users);
-  }
-
-  return allUsers.slice(0, 5).map((user) => ({
+  return data.users.map((user: { firstName: string; lastName: string; image: string; company: { name: string } }) => ({
     name: `${user.firstName} ${user.lastName}`,
     image: user.image,
     company: user.company.name,
@@ -61,9 +52,12 @@ export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
-  const jobsData = await fetchJobs();
-  const categoriesData = await fetchAllJobsForCategories();
-  const featuredProfessionals = await fetchFeaturedProfessionals();
+  // Optimized: parallel fetching with Promise.all() instead of sequential awaits
+  const [jobsData, categoriesData, featuredProfessionals] = await Promise.all([
+    fetchJobs(),
+    fetchAllJobsForCategories(),
+    fetchFeaturedProfessionals(),
+  ]);
 
   const jobs: Job[] = jobsData;
   const categories = [

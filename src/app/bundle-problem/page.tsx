@@ -1,7 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { JobAnalytics } from "@/components/job-analytics";
+import dynamic from "next/dynamic";
+
+// Optimized: dynamic import for heavy Chart.js component (~300KB)
+// Loads only when user toggles analytics, not in initial bundle
+const JobAnalytics = dynamic(
+  () => import("@/components/job-analytics").then((m) => m.JobAnalytics),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-gray-800 rounded-xl p-6 animate-pulse">
+        <div className="h-8 bg-gray-700 rounded w-1/3 mb-6"></div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-gray-700 rounded-lg h-20"></div>
+          ))}
+        </div>
+        <div className="h-64 bg-gray-700 rounded"></div>
+      </div>
+    ),
+  }
+);
 
 type Job = {
   id: string;

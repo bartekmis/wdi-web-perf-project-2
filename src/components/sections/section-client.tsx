@@ -1,128 +1,65 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { JobCard } from "@/components/ui/job-card";
-import axios from "axios";
+
+// Optimized CSR section:
+// 1. Single fetch instead of N+1 (removed 6 redundant detail fetches)
+// 2. Removed useEffect re-fetch on allJobs change (derived state instead)
+// 3. Removed redundant search event re-fetch loop (6 category fetches per search)
+// 4. Uses queryKey-based staleTime from QueryProvider (60s)
+// 5. Sorting/filtering done client-side from cached data (no extra API calls)
 
 export const SectionClient = () => {
   const [duration, setDuration] = useState<number>(0);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [sortBy, setSortBy] = useState<string>("newest");
   const [filterQuery, setFilterQuery] = useState<string>("");
+  const [activeFilter, setActiveFilter] = useState<string>("");
 
   const { data: allJobs = [], isLoading } = useQuery({
     queryKey: ["jobs-client"],
     queryFn: async () => {
       const start = performance.now();
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`
+      );
       const json = await res.json();
-
-      for (const job of json.slice(0, 6)) {
-        try {
-          const detailsRes = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-          );
-          const jobDetails = detailsRes.data.find((j: Job) => j.id === job.id);
-          console.log(`Refetched details for job: ${jobDetails?.role}`);
-        } catch {
-          console.log("Failed to refetch job details");
-        }
-      }
-
       const end = performance.now();
       setDuration(end - start);
-      return json;
+      return json as Job[];
     },
-    staleTime: 0,
-    refetchOnWindowFocus: true,
   });
 
-  useEffect(() => {
-    if (allJobs.length > 0) {
-      const fetchAndProcess = async () => {
-        try {
-          const res = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-          );
-          const jobs = res.data;
+  // Optimized: derive filtered/sorted jobs during render instead of useEffect + state
+  const displayJobs = useMemo(() => {
+    let jobs = [...allJobs];
 
-          let processed = jobs.filter((_: Job, index: number) => index < 6);
-
-          if (sortBy === "company") {
-            processed = processed.sort((a: Job, b: Job) =>
-              a.companyName.localeCompare(b.companyName)
-            );
-          } else if (sortBy === "position") {
-            const positionOrder = { Junior: 1, Mid: 2, Senior: 3 };
-            processed = processed.sort(
-              (a: Job, b: Job) =>
-                (positionOrder[a.position as keyof typeof positionOrder] || 0) -
-                (positionOrder[b.position as keyof typeof positionOrder] || 0)
-            );
-          }
-
-          setFilteredJobs(processed);
-        } catch {
-          console.log("Processing failed");
-        }
-      };
-
-      fetchAndProcess();
+    // Apply filter
+    if (activeFilter) {
+      jobs = jobs.filter((job) =>
+        job.role.toLowerCase().includes(activeFilter.toLowerCase())
+      );
     }
-  }, [allJobs, sortBy]);
 
-  useEffect(() => {
-    const handleSearch = (event: CustomEvent) => {
-      const fetchFilteredJobs = async () => {
-        const { queryString } = event.detail;
+    // Apply sort
+    if (sortBy === "company") {
+      jobs = jobs.toSorted((a, b) =>
+        a.companyName.localeCompare(b.companyName)
+      );
+    } else if (sortBy === "position") {
+      const positionOrder = { Junior: 1, Mid: 2, Senior: 3 };
+      jobs = jobs.toSorted(
+        (a, b) =>
+          (positionOrder[a.position as keyof typeof positionOrder] || 0) -
+          (positionOrder[b.position as keyof typeof positionOrder] || 0)
+      );
+    }
 
-        const apiUrl = queryString
-          ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?${queryString}`
-          : `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`;
-
-        try {
-          const res = await axios.get(apiUrl);
-          const jobs: Job[] = res.data;
-
-          for (const job of jobs.slice(0, 6)) {
-            const categoryRes = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-            );
-            const allJobs: Job[] = categoryRes.data;
-            const sameCategory = allJobs.filter(
-              (j: Job) => j.category === job.category
-            );
-            console.log(
-              `Job ${job.role} has ${sameCategory.length} jobs in same category`
-            );
-          }
-
-          setFilteredJobs(jobs.slice(0, 6));
-        } catch (error) {
-          console.error("Search failed:", error);
-          setFilteredJobs(allJobs.slice(0, 6));
-        }
-      };
-
-      fetchFilteredJobs();
-    };
-
-    const handleSort = (event: CustomEvent) => {
-      setSortBy(event.detail.sortBy);
-    };
-
-    window.addEventListener("jobSearch", handleSearch as EventListener);
-    window.addEventListener("jobSort", handleSort as EventListener);
-
-    return () => {
-      window.removeEventListener("jobSearch", handleSearch as EventListener);
-      window.removeEventListener("jobSort", handleSort as EventListener);
-    };
-  }, [allJobs]);
+    return jobs;
+  }, [allJobs, sortBy, activeFilter]);
 
   if (isLoading) {
     return (
@@ -176,13 +113,7 @@ export const SectionClient = () => {
             <select
               id="sort-by"
               value={sortBy}
-              onChange={(e) =>
-                window.dispatchEvent(
-                  new CustomEvent("jobSort", {
-                    detail: { sortBy: e.target.value },
-                  })
-                )
-              }
+              onChange={(e) => setSortBy(e.target.value)}
               className="border rounded px-2 py-1"
             >
               <option value="newest">Najnowsze</option>
@@ -200,48 +131,25 @@ export const SectionClient = () => {
             />
           </div>
           <button
-            onClick={() => {
-              const queryParams = new URLSearchParams();
-              if (filterQuery) queryParams.append("role", filterQuery);
-              window.dispatchEvent(
-                new CustomEvent("jobSearch", {
-                  detail: { queryString: queryParams.toString() },
-                })
-              );
-            }}
+            onClick={() => setActiveFilter(filterQuery)}
             className="bg-blue-600 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition-colors font-semibold"
           >
             Filtruj
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(filteredJobs.length > 0 ? filteredJobs : allJobs.slice(0, 6)).map(
-            (job: Job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                variant="client"
-                showMetadata={true}
-                metadata={{
-                  renderType: "CSR - Client Side Rendered",
-                }}
-                buttonText="See offer"
-                onApply={async (job) => {
-                  try {
-                    const res = await axios.get(
-                      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-                    );
-                    const jobDetails = res.data.find(
-                      (j: Job) => j.id === job.id
-                    );
-                    console.log(`Viewing offer: ${jobDetails?.role}`);
-                  } catch {
-                    console.log("API call failed");
-                  }
-                }}
-              />
-            )
-          )}
+          {displayJobs.map((job: Job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              variant="client"
+              showMetadata={true}
+              metadata={{
+                renderType: "CSR - Client Side Rendered",
+              }}
+              buttonText="See offer"
+            />
+          ))}
         </div>
       </div>
     </section>
