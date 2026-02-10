@@ -1,19 +1,12 @@
+import { PerformanceMonitor } from "@/components/performance-monitor";
 import { getSectionServerContent } from "@/components/sections/section-server";
-import dynamic from "next/dynamic";
 import Script from "next/script";
-
-const PerformanceMonitor = dynamic(
-    () =>
-        import("@/components/performance-monitor").then(
-            (module) => module.PerformanceMonitor,
-        ),
-    { ssr: false },
-);
 
 export default async function SSRPage() {
     const { element, serverLoadTime, serverApiCallCount } =
         await getSectionServerContent();
-    const shouldRenderPerformanceMonitor = process.env.NODE_ENV !== "production";
+    const shouldRenderPerformanceMonitor =
+        process.env.NODE_ENV !== "production";
 
     return (
         <>
