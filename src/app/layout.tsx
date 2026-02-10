@@ -5,7 +5,12 @@ import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ 
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  variable: "--font-inter"
+});
 
 export const metadata: Metadata = {
   title: "Job hunter Performance Demo",
@@ -25,6 +30,8 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <Script
           id="Cookiebot"
           src="https://consent.cookiebot.com/uc.js"
@@ -41,7 +48,7 @@ export default async function RootLayout({
         }}></style>
         <meta name="robots" content="noindex, nofollow" />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${inter.variable}`}>
         {gtmId && (
           <Script
             id="gtm-script"
