@@ -32,25 +32,20 @@ async function fetchAllJobsForCategories() {
 }
 
 async function fetchFeaturedProfessionals() {
-  const allUsers: {
+  serverApiCallCount++;
+  const res = await fetch(
+    `https://dummyjson.com/users?limit=5`,
+    { cache: "force-cache" }
+  );
+  if (!res.ok) throw new Error("Failed to fetch featured professionals");
+  const data = await res.json();
+
+  return data.users.map((user: {
     firstName: string;
     lastName: string;
     image: string;
     company: { name: string };
-  }[] = [];
-
-  for (let page = 0; page < 5; page++) {
-    serverApiCallCount++;
-    const res = await fetch(
-      `https://dummyjson.com/users?limit=30&skip=${page * 30}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error("Failed to fetch featured professionals");
-    const data = await res.json();
-    allUsers.push(...data.users);
-  }
-
-  return allUsers.slice(0, 5).map((user) => ({
+  }) => ({
     name: `${user.firstName} ${user.lastName}`,
     image: user.image,
     company: user.company.name,
@@ -71,7 +66,7 @@ export async function getSectionServerContent() {
   ];
   console.log(`[SERVER] Processed ${categories.length} categories.`);
   console.log(
-    `[SERVER] Featured professionals: fetched 150 users in 5 sequential requests to display ${featuredProfessionals.length}`
+    `[SERVER] Featured professionals: fetched ${featuredProfessionals.length} users in 1 request`
   );
 
   const end = performance.now();
@@ -134,7 +129,7 @@ export async function getSectionServerContent() {
               )}
             </div>
             <p className="text-xs text-gray-400 mt-3">
-              Source: External API (150 records fetched in 5 sequential requests to display 5)
+              Source: External API (5 records fetched in 1 request)
             </p>
           </div>
 
