@@ -1,16 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
-
-const inter = Inter({ 
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-  variable: "--font-inter"
-});
 
 export const metadata: Metadata = {
   title: "Job hunter Performance Demo",
@@ -30,8 +22,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <meta name="robots" content="noindex, nofollow" />
+        <link rel="preload" href="/fonts/inter-regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/inter-bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <Script
           id="Cookiebot"
           src="https://consent.cookiebot.com/uc.js"
@@ -41,14 +34,27 @@ export default async function RootLayout({
         />
         <style dangerouslySetInnerHTML={{
           __html: `
+            @font-face {
+              font-family: 'Inter';
+              font-style: normal;
+              font-weight: 400;
+              font-display: swap;
+              src: url('/fonts/inter-regular.woff2') format('woff2');
+            }
+            @font-face {
+              font-family: 'Inter';
+              font-style: normal;
+              font-weight: 700;
+              font-display: swap;
+              src: url('/fonts/inter-bold.woff2') format('woff2');
+            }
             h1, h2 {
               font-weight: 700;
             }
           `
         }}></style>
-        <meta name="robots" content="noindex, nofollow" />
       </head>
-      <body className={`${inter.className} ${inter.variable}`}>
+      <body style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
         {gtmId && (
           <Script
             id="gtm-script"
