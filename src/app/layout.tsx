@@ -21,7 +21,7 @@ export default async function RootLayout({
 }>) {
   const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  
+
   return (
     <html lang="en">
       <head>
@@ -43,8 +43,8 @@ export default async function RootLayout({
         <script src={recaptchaScript}></script>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script type="text/javascript" src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
-        <script 
-          type="text/javascript" 
+        <script
+          type="text/javascript"
           dangerouslySetInnerHTML={{
             __html: `
               document.addEventListener('DOMContentLoaded', function () {
@@ -79,7 +79,7 @@ export default async function RootLayout({
           <footer className="bg-gray-800 text-white py-8 mt-auto">
             <div className="container mx-auto px-4 text-center">
               <h3 className="text-lg font-semibold mb-4">
-                Performance Demonstration...
+                Performance Demonstration
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                 <div>
