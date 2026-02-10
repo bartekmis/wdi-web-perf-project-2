@@ -25,6 +25,14 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="preconnect" href="https://consent.cookiebot.com" />
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="63fb3fd9-1ae4-45ea-b789-42de9ecbe1d2"
+          data-blockingmode="auto"
+          strategy="afterInteractive"
+        />
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         {gtmId && (
           <script
