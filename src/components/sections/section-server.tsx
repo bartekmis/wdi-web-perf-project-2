@@ -1,5 +1,6 @@
 import { JobCard } from "@/components/ui/job-card";
 import { Job } from "@/types/job";
+import Image from "next/image";
 
 let serverApiCallCount = 0;
 
@@ -8,7 +9,8 @@ async function fetchJobs() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
     {
-      cache: "no-store",
+      cache: "force-cache",
+      next: { revalidate: 3600 },
     }
   );
   if (!res.ok) {
@@ -22,7 +24,8 @@ async function fetchAllJobsForCategories() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
     {
-      cache: "no-store",
+      cache: "force-cache",
+      next: { revalidate: 3600 },
     }
   );
   if (!res.ok) {
@@ -56,9 +59,12 @@ export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
-  const jobsData = await fetchJobs();
-  const categoriesData = await fetchAllJobsForCategories();
-  const featuredProfessionals = await fetchFeaturedProfessionals();
+  // Parallelize API calls
+  const [jobsData, categoriesData, featuredProfessionals] = await Promise.all([
+    fetchJobs(),
+    fetchAllJobsForCategories(),
+    fetchFeaturedProfessionals(),
+  ]);
 
   const jobs: Job[] = jobsData;
   const categories = [
@@ -112,8 +118,7 @@ export async function getSectionServerContent() {
                   i: number
                 ) => (
                   <div key={i} className="flex flex-col items-center gap-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={person.image}
                       alt={person.name}
                       width={64}

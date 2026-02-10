@@ -25,8 +25,13 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script id="Cookiebot" src="https://consent.cookiebot.com/uc.js" data-cbid="aad5a0df-ab8f-46e2-85aa-8dea47103cdb" data-blockingmode="auto" type="text/javascript"></script>
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="aad5a0df-ab8f-46e2-85aa-8dea47103cdb"
+          data-blockingmode="auto"
+          strategy="afterInteractive"
+        />
         <style dangerouslySetInnerHTML={{
           __html: `
             h1, h2 {
