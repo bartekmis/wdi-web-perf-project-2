@@ -2,27 +2,7 @@ import Link from "next/link";
 
 export default function Home() {
   return (
-    <>
-      <script src="https://cdn.wpcc.io/lib/1.0.2/cookieconsent.min.js" defer></script>
-      <link rel="stylesheet" type="text/css" href="https://cdn.wpcc.io/lib/1.0.2/cookieconsent.min.css" media="print" onLoad="this.media='all'"/>
-      <script dangerouslySetInnerHTML={{
-        __html: `
-          window.addEventListener("load", function(){
-            window.wpcc.init({
-              "border":"thin",
-              "colors":{
-                "popup":{"background":"#ffffff","text":"#000000","border":"#f1273b"},
-                "button":{"background":"#0085ff","text":"#ffffff"}
-              },
-              "content":{
-                "href":"/privacy-policy/",
-                "button":"Continue"
-              }
-            })
-          });
-        `
-      }} />
-      <div className="container mx-auto px-4 py-16 text-center" style={{ contentVisibility: 'auto' }}>
+    <div className="container mx-auto px-4 py-16 text-center" style={{ contentVisibility: 'auto' }}>
       <h1 className="text-5xl font-bold text-gray-900 mb-6">
         Demo Wydajności Next.js
       </h1>
@@ -81,7 +61,6 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </Link>
       </div>
-      </div>
-    </>
+    </div>
   );
 }
