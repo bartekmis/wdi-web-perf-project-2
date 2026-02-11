@@ -10,7 +10,11 @@ async function getSuspenseJobs() {
   const start = performance.now();
 
   const initialRes = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
+    {
+      cache: "force-cache",
+      next: { revalidate: 3600 },
+    }
   );
   if (!initialRes.ok) {
     throw new Error("Failed to fetch initial suspense jobs");
@@ -20,7 +24,11 @@ async function getSuspenseJobs() {
   const detailedJobsPromises = initialJobs.map(async (job) => {
     serverApiCallCount++;
     const detailsRes = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${job.id}`
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs/${job.id}`,
+      {
+        cache: "force-cache",
+        next: { revalidate: 3600 },
+      }
     );
     if (!detailsRes.ok) {
       console.warn(`Failed to fetch details for job ${job.id}`);

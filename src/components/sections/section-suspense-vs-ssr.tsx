@@ -4,7 +4,8 @@ import { JobCard } from "../ui/job-card";
 
 async function fetchJobs() {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`, {
-    cache: "no-store",
+    cache: "force-cache",
+    next: { revalidate: 3600 },
   });
   if (!res.ok) {
     throw new Error("Failed to fetch jobs");

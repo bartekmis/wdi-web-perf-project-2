@@ -21,8 +21,40 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "dummyjson.com",
+        port: "",
+        pathname: "/**",
+      },
     ],
-  }
+  },
+  async headers() {
+    if (process.env.NODE_ENV !== 'production') {
+      return [];
+    }
+
+    return [
+      {
+        source: "/isr",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=600, s-maxage=3600, stale-while-revalidate=14400",
+          },
+        ],
+      },
+      {
+        source: "/ssr",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=600, s-maxage=3600, stale-while-revalidate=14400",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

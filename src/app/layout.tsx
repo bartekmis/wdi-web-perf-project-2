@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Job hunter Performance Demo",
@@ -21,13 +18,52 @@ export default async function RootLayout({
 }>) {
   const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  
+
   return (
     <html lang="en">
       <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <meta name="robots" content="noindex, nofollow" />
+        <link rel="preload" href="/fonts/inter-regular.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/inter-bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://consent.cookiebot.com" />
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="aad5a0df-ab8f-46e2-85aa-8dea47103cdb"
+          data-blockingmode="auto"
+          strategy="lazyOnload"
+        />
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            @font-face {
+              font-family: 'Inter';
+              font-style: normal;
+              font-weight: 400;
+              font-display: swap;
+              src: url('/fonts/inter-regular.woff2') format('woff2');
+            }
+            @font-face {
+              font-family: 'Inter';
+              font-style: normal;
+              font-weight: 700;
+              font-display: swap;
+              src: url('/fonts/inter-bold.woff2') format('woff2');
+            }
+            h1, h2 {
+              font-weight: 700;
+            }
+            .grid > * {
+              content-visibility: auto;
+              contain-intrinsic-size: 120px;
+            }
+          `
+        }}></style>
+      </head>
+      <body style={{ fontFamily: 'Inter, system-ui, sans-serif' }}>
         {gtmId && (
-          <script
+          <Script
+            id="gtm-script"
+            strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `
                 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -39,47 +75,17 @@ export default async function RootLayout({
             }}
           />
         )}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script type="text/javascript" src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
-        <script 
-          type="text/javascript" 
-          dangerouslySetInnerHTML={{
-            __html: `
-              document.addEventListener('DOMContentLoaded', function () {
-                cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
-              });
-            `
-          }}
+        <Script
+          src={recaptchaScript}
+          strategy="lazyOnload"
         />
-        <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed</a></noscript>
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            @font-face {
-              font-family: 'roboto-font';
-              src: url('/fonts/roboto-font.woff2') format('woff2');
-              font-weight: normal;
-              font-style: normal;
-              font-display: swap;
-            }
-
-            h1, h2 {
-              font-family: 'roboto-font', sans-serif;
-              font-weight: 700;
-            }
-          `
-        }} />
-        <meta name="robots" content="noindex, nofollow" />
-      </head>
-      <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <QueryProvider>{children}</QueryProvider>
           <footer className="bg-gray-800 text-white py-8 mt-auto">
             <div className="container mx-auto px-4 text-center">
               <h3 className="text-lg font-semibold mb-4">
-                Performance Demonstration...
+                Performance Demonstration
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                 <div>
