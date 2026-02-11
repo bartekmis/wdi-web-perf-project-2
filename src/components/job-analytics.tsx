@@ -42,16 +42,6 @@ function generateAnalyticsData() {
     "Frontend",
     "Backend",
   ];
-  const locations = [
-    "Warszawa",
-    "Krakow",
-    "Gdansk",
-    "Wroclaw",
-    "Poznan",
-    "Lodz",
-    "Katowice",
-    "Szczecin",
-  ];
 
   const dailyData: {
     date: string;
@@ -79,112 +69,35 @@ function generateAnalyticsData() {
     });
   }
 
+  // Optimized: compute aggregates inline instead of building large arrays
+  // Removed: unused description/keywords string manipulation, JSON round-trips,
+  // unused sorts (topByScore/topBySalary/topByExp), and unused searchHits
+  const itemCount = 5000;
   const categoryStats = categories.map((category) => {
-    const categoryData = [];
+    let totalSalary = 0;
+    let totalExperience = 0;
+    let totalApplications = 0;
 
-    for (let i = 0; i < 5000; i++) {
-      const item = {
-        id: `${category}-${i}`,
-        salary: 8000 + Math.random() * 25000,
-        experience: Math.floor(Math.random() * 15),
-        applications: Math.floor(Math.random() * 200),
-        score: Math.random() * 100,
-        description: `${category} position ${i}`
-          .repeat(10)
-          .split("")
-          .reverse()
-          .join(""),
-        keywords: Array.from(
-          { length: 20 },
-          (_, k) => `keyword-${i}-${k}`,
-        ).join(","),
-      };
-
-      const serialized = JSON.stringify(item);
-      const parsed = JSON.parse(serialized);
-      categoryData.push(parsed);
+    for (let i = 0; i < itemCount; i++) {
+      totalSalary += 8000 + Math.random() * 25000;
+      totalExperience += Math.floor(Math.random() * 15);
+      totalApplications += Math.floor(Math.random() * 200);
     }
-
-    const avgSalary =
-      categoryData.reduce((sum, d) => sum + d.salary, 0) / categoryData.length;
-    const avgExperience =
-      categoryData.reduce((sum, d) => sum + d.experience, 0) /
-      categoryData.length;
-    const totalApplications = categoryData.reduce(
-      (sum, d) => sum + d.applications,
-      0,
-    );
-
-    const sortedByScore = [...categoryData].sort((a, b) => b.score - a.score);
-    const sortedBySalary = [...categoryData].sort(
-      (a, b) => b.salary - a.salary,
-    );
-    const sortedByExp = [...categoryData].sort(
-      (a, b) => b.experience - a.experience,
-    );
-
-    const searchResults = categoryData.filter((item) =>
-      item.description.toLowerCase().includes(category.toLowerCase()),
-    );
 
     return {
       category,
-      avgSalary: Math.round(avgSalary),
-      avgExperience: Math.round(avgExperience * 10) / 10,
+      avgSalary: Math.round(totalSalary / itemCount),
+      avgExperience: Math.round((totalExperience / itemCount) * 10) / 10,
       totalApplications,
-      totalJobs: categoryData.length,
-      topByScore: sortedByScore.slice(0, 10),
-      topBySalary: sortedBySalary.slice(0, 10),
-      topByExp: sortedByExp.slice(0, 10),
-      searchHits: searchResults.length,
+      totalJobs: itemCount,
     };
   });
 
-  const locationStats = locations.map((location) => {
-    const monthlyData = [];
-    for (let m = 0; m < 36; m++) {
-      const data = {
-        month: m,
-        jobs: Math.floor(100 + Math.random() * 200),
-        avgSalary: Math.floor(10000 + Math.random() * 15000),
-        details: JSON.stringify({ location, month: m, random: Math.random() }),
-      };
-      JSON.parse(data.details);
-      monthlyData.push(data);
-    }
-    return { location, monthlyData };
-  });
-
-  const correlationMatrix: number[][] = [];
-  for (let i = 0; i < categories.length; i++) {
-    correlationMatrix[i] = [];
-    for (let j = 0; j < categories.length; j++) {
-      let correlation = 0;
-      for (let k = 0; k < 2000; k++) {
-        correlation += Math.random() * Math.random();
-        const temp = `${i}-${j}-${k}`.split("-").reverse().join("");
-        correlation += temp.length * 0.0001;
-      }
-      correlationMatrix[i][j] = Math.round((correlation / 2000) * 100) / 100;
-    }
-  }
-
-  const searchIndex: Record<string, string[]> = {};
-  categoryStats.forEach((cat) => {
-    const words = cat.category.toLowerCase().split("");
-    words.forEach((char) => {
-      if (!searchIndex[char]) searchIndex[char] = [];
-      searchIndex[char].push(cat.category);
-      searchIndex[char] = JSON.parse(JSON.stringify(searchIndex[char]));
-    });
-  });
+  // Removed: locationStats, correlationMatrix, searchIndex — none were used by the component
 
   return {
     dailyData,
     categoryStats,
-    locationStats,
-    correlationMatrix,
-    searchIndex,
     summary: {
       totalJobs: dailyData.reduce((sum, d) => sum + d.jobs, 0),
       totalApplications: dailyData.reduce((sum, d) => sum + d.applications, 0),
