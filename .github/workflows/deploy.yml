@@ -13,7 +13,7 @@ on:
     #- wdi-training-catalina.online
     - wdi-training-ryder.online
     #- wdi-training-lance-vance.online
-    #- wdi-training-niko-bellic.online
+    - wdi-training-niko-bellic.online
     #- wdi-training-roman-bellic.online
     - wdi-training-hernandez.online
     #- wdi-training-ammu-nation-clerk.online
