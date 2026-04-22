@@ -87,7 +87,7 @@ export async function getSectionServerContent() {
       <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-8">
-            <h2 className="text-5xl font-bold mb-2">
+            <h2 className="text-6xl font-bold mb-2">
               Server-Side Rendered Jobs
             </h2>
             <p className="text-gray-600">Rendering technique: SSR</p>
