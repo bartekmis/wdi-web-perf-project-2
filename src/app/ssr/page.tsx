@@ -1,4 +1,4 @@
-import { PerformanceMonitor } from "@/components/performance-monitor";
+import PerformanceMonitor from "@/components/performance-monitor-lazy";
 import { getSectionServerContent } from "@/components/sections/section-server";
 
 export default async function SSRPage() {
