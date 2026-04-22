@@ -1,6 +1,8 @@
 import { PerformanceMonitor } from "@/components/performance-monitor";
 import { getSectionISRContent } from "@/components/sections/section-isr";
 
+export const revalidate = 600;
+
 export default async function ISRPage() {
   const { element, serverLoadTime, serverApiCallCount } = await getSectionISRContent();
 
