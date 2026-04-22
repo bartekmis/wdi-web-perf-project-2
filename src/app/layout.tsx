@@ -52,9 +52,8 @@ export default async function RootLayout({
           src="https://consent.cookiebot.com/uc.js"
           data-cbid="45675568-7e90-41fe-905c-7ccfafd6c799"
           data-blockingmode="auto"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
-        {/* afterInteractive: analytics, no need to block rendering */}
         {gtmId && (
           <Script
             id="gtm"

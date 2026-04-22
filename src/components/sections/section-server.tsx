@@ -1,5 +1,5 @@
+import Image from "next/image";
 import { JobCard } from "@/components/ui/job-card";
-import { PerformanceMonitor } from "@/components/performance-monitor";
 import { Job } from "@/types/job";
 
 let serverApiCallCount = 0;
@@ -26,23 +26,24 @@ async function fetchAllJobsForCategories() {
 
 async function fetchFeaturedProfessionals() {
   serverApiCallCount++;
-  const res = await fetch(
-    `https://dummyjson.com/users?limit=5&skip=0`,
-    { next: { revalidate: 60 } }
-  );
+  const res = await fetch(`https://dummyjson.com/users?limit=5&skip=0`, {
+    next: { revalidate: 60 },
+  });
   if (!res.ok) throw new Error("Failed to fetch featured professionals");
   const data = await res.json();
 
-  return data.users.map((user: {
-    firstName: string;
-    lastName: string;
-    image: string;
-    company: { name: string };
-  }) => ({
-    name: `${user.firstName} ${user.lastName}`,
-    image: user.image,
-    company: user.company.name,
-  }));
+  return data.users.map(
+    (user: {
+      firstName: string;
+      lastName: string;
+      image: string;
+      company: { name: string };
+    }) => ({
+      name: `${user.firstName} ${user.lastName}`,
+      image: user.image,
+      company: user.company.name,
+    })
+  );
 }
 
 export async function getSectionServerContent() {
@@ -67,7 +68,9 @@ export async function getSectionServerContent() {
   const end = performance.now();
   const serverLoadTime = end - start;
   console.log(
-    `[SERVER] Server-Side Rendered (SSR) content loaded in: ${serverLoadTime.toFixed(2)}ms`
+    `[SERVER] Server-Side Rendered (SSR) content loaded in: ${serverLoadTime.toFixed(
+      2
+    )}ms`
   );
 
   const element = (
@@ -104,8 +107,7 @@ export async function getSectionServerContent() {
                   i: number
                 ) => (
                   <div key={i} className="flex flex-col items-center gap-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={person.image}
                       alt={person.name}
                       width={64}
@@ -148,18 +150,4 @@ export async function getSectionServerContent() {
   );
 
   return { element, serverLoadTime, serverApiCallCount };
-}
-
-export async function SectionServer() {
-  const { element, serverLoadTime, serverApiCallCount } =
-    await getSectionServerContent();
-  return (
-    <>
-      {element}
-      <PerformanceMonitor
-        serverLoadTimes={{ ssr: serverLoadTime }}
-        serverApiCalls={serverApiCallCount}
-      />
-    </>
-  );
 }

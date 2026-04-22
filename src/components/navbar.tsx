@@ -20,7 +20,7 @@ export const Navbar = () => {
         setItems(navResponse.data);
 
         const jobsResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
         );
         const jobs = jobsResponse.data as Job[];
 
@@ -29,7 +29,7 @@ export const Navbar = () => {
 
         for (const category of categories) {
           const categoryJobs = jobs.filter(
-            (job: Job) => job.category === category,
+            (job: Job) => job.category === category
           );
           console.log(`Category ${category}: ${categoryJobs.length} jobs`);
         }
@@ -47,14 +47,14 @@ export const Navbar = () => {
   const handleItemHover = async (item: Route) => {
     try {
       const jobsResponse = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
       );
       const categoryJobs = jobsResponse.data.filter(
         (job: Job) =>
-          job.category === item.label || item.label.includes(job.category),
+          job.category === item.label || item.label.includes(job.category)
       );
       console.log(
-        `Hovered ${item.label}: Found ${categoryJobs.length} related jobs`,
+        `Hovered ${item.label}: Found ${categoryJobs.length} related jobs`
       );
     } catch {
       console.log("Hover job fetch failed");
@@ -63,14 +63,14 @@ export const Navbar = () => {
 
   if (loading) {
     return (
-      <nav className="bg-blue-600 text-white p-4">
+      <nav className="bg-blue-600 text-white p-4 min-h-[72px]">
         <div className="container mx-auto flex justify-between items-center">
           <div className="text-xl font-bold">Job Hub</div>
           <div className="flex space-x-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={i}
-                className="animate-pulse bg-blue-400 h-6 w-20 rounded"
+                className="animate-pulse bg-blue-400 h-10 w-20 rounded"
               ></div>
             ))}
           </div>
@@ -80,7 +80,7 @@ export const Navbar = () => {
   }
 
   return (
-    <nav className="bg-blue-600 text-white p-4 shadow-lg">
+    <nav className="bg-blue-600 text-white p-4 shadow-lg min-h-[72px]">
       <div className="container mx-auto flex justify-between items-center">
         <div className="text-xl font-bold">Job Hub</div>
         <Link href="/bundle-problem">Bundle Problem Page</Link>
