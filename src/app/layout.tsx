@@ -1,17 +1,17 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import Script from "next/script";
-import "./globals.css";
-import { Navbar } from "@/components/navbar";
-import { QueryProvider } from "@/components/providers/query-provider";
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import Script from 'next/script';
+import './globals.css';
+import { Navbar } from '@/components/navbar';
+import { QueryProvider } from '@/components/providers/query-provider';
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: "Job hunter Performance Demo",
+  title: 'Job hunter Performance Demo',
   description:
-    "A performance demonstration with multiple rendering techniques and intentional bottlenecks for optimization training",
-  keywords: "jobs, career, performance, next.js, optimization",
+    'A performance demonstration with multiple rendering techniques and intentional bottlenecks for optimization training',
+  keywords: 'jobs, career, performance, next.js, optimization',
 };
 
 export default async function RootLayout({
@@ -21,7 +21,7 @@ export default async function RootLayout({
 }>) {
   const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  
+
   return (
     <html lang="en">
       <head>
@@ -42,20 +42,27 @@ export default async function RootLayout({
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src={recaptchaScript}></script>
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script type="text/javascript" src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
-        <script 
-          type="text/javascript" 
+        <script
+          type="text/javascript"
+          src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"
+        ></script>
+        <script
+          type="text/javascript"
           dangerouslySetInnerHTML={{
             __html: `
               document.addEventListener('DOMContentLoaded', function () {
                 cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
               });
-            `
+            `,
           }}
         />
-        <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed</a></noscript>
-        <style dangerouslySetInnerHTML={{
-          __html: `
+        <noscript>
+          Free cookie consent management tool by{' '}
+          <a href="https://www.termsfeed.com/">TermsFeed</a>
+        </noscript>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
             @font-face {
               font-family: 'roboto-font';
               src: url('/fonts/roboto-font.woff2') format('woff2');
@@ -68,8 +75,9 @@ export default async function RootLayout({
               font-family: 'roboto-font', sans-serif;
               font-weight: 700;
             }
-          `
-        }} />
+          `,
+          }}
+        />
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
@@ -79,7 +87,7 @@ export default async function RootLayout({
           <footer className="bg-gray-800 text-white py-8 mt-auto">
             <div className="container mx-auto px-4 text-center">
               <h3 className="text-lg font-semibold mb-4">
-                Performance Demonstration...
+                Performance Demonstration... Lazlow!
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                 <div>
