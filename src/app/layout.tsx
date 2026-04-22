@@ -5,7 +5,12 @@ import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  preload: true,
+});
 
 export const metadata: Metadata = {
   title: "Job hunter Performance Demo",
@@ -33,8 +38,8 @@ export default async function RootLayout({
         {gtmId && (
           <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         )}
-        <link rel="dns-prefetch" href="https://www.termsfeed.com" />
         <link rel="dns-prefetch" href="https://consent.cookiebot.com" />
+        <link rel="dns-prefetch" href="https://consentcdn.cookiebot.com" />
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
@@ -91,14 +96,13 @@ export default async function RootLayout({
         )}
 
         {/*
-         * Cookiebot CMP — injected dynamically after first user interaction (or an
-         * 8s fallback) so that it never competes with real content for LCP. The
-         * dynamically-created <script> element is async by default, so `data-
-         * blockingmode="auto"` runs without blocking HTML parsing. The exact tag
-         * produced is equivalent to:
-         *   <script id="Cookiebot" src=".../uc.js"
-         *           data-cbid="4b11e694-..." data-blockingmode="auto"
-         *           type="text/javascript"></script>
+         * Cookiebot CMP — injected dynamically after first user interaction (or
+         * a 12s fallback) so it never competes with real content for LCP.
+         * `data-blockingmode="manual"` is used instead of `"auto"` because
+         * "auto" walks the entire DOM on load and re-processes every script tag,
+         * which on a 4x-throttled Moto G Power adds ~8-10s of Total Blocking
+         * Time. With "manual", tracking scripts opt in via `data-cookieconsent`
+         * attributes instead.
          */}
         <Script
           id="cookiebot-loader"
@@ -124,7 +128,7 @@ export default async function RootLayout({
                   s.type = 'text/javascript';
                   s.async = true;
                   s.setAttribute('data-cbid', '4b11e694-66f4-4a7d-bb1f-a772d4748d97');
-                  s.setAttribute('data-blockingmode', 'auto');
+                  s.setAttribute('data-blockingmode', 'manual');
                   document.head.appendChild(s);
                 }
 
@@ -132,64 +136,8 @@ export default async function RootLayout({
                   window.addEventListener(e, inject, { once: true, passive: true, capture: true });
                 });
 
-                // Fallback: fires well after LCP has been finalized.
-                setTimeout(inject, 8000);
-              })();
-            `,
-          }}
-        />
-
-        <Script
-          id="cookie-consent-lib"
-          src="https://www.termsfeed.com/public/cookie-consent/4.2.0/cookie-consent.js"
-          strategy="lazyOnload"
-        />
-        <Script
-          id="cookie-consent-init"
-          strategy="lazyOnload"
-          dangerouslySetInnerHTML={{
-            __html: `
-              // Defer cookie banner until AFTER the LCP window closes.
-              // LCP is finalized on first user interaction, so we wait for one of:
-              // pointerdown/keydown/touchstart/scroll. An 8s fallback covers bots
-              // and idle visitors so the banner still shows eventually.
-              (function deferBanner() {
-                var fired = false;
-                var start = performance.now();
-                var events = ['pointerdown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
-
-                function init() {
-                  if (fired) return;
-                  fired = true;
-                  events.forEach(function (e) {
-                    window.removeEventListener(e, init, { capture: true });
-                  });
-
-                  (function waitForLib() {
-                    if (window.cookieconsent && typeof window.cookieconsent.run === 'function') {
-                      window.cookieconsent.run({
-                        notice_banner_type: "simple",
-                        consent_type: "express",
-                        palette: "dark",
-                        language: "pl",
-                        page_load_consent_levels: ["strictly-necessary"],
-                        notice_banner_reject_button_hide: false,
-                        preferences_center_close_button_hide: false,
-                        page_refresh_confirmation_buttons: false,
-                        website_name: "WDI Training"
-                      });
-                    } else if (performance.now() - start < 15000) {
-                      setTimeout(waitForLib, 100);
-                    }
-                  })();
-                }
-
-                events.forEach(function (e) {
-                  window.addEventListener(e, init, { once: true, passive: true, capture: true });
-                });
-
-                // Fallback: 8s is well past typical LCP finalization (2.5s).
-                setTimeout(init, 8000);
+                // Fallback — 12s is far past typical LCP/CLS finalization.
+                setTimeout(inject, 12000);
               })();
             `,
           }}

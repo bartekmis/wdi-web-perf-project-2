@@ -120,3 +120,16 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * Cookiebot CMP containment.
+ * `contain: layout paint` isolates the banner so size changes inside
+ * CybotCookiebotDialog cannot reflow surrounding content (otherwise the late
+ * banner injection triggers large layout shifts and tanks CLS).
+ * `position: fixed` keeps it out of the document flow entirely.
+ */
+#CybotCookiebotDialog,
+#CybotCookiebotDialogBodyUnderlay {
+  position: fixed !important;
+  contain: layout paint;
+}
