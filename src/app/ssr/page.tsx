@@ -1,6 +1,8 @@
 import { PerformanceMonitor } from "@/components/performance-monitor";
 import { getSectionServerContent } from "@/components/sections/section-server";
 
+export const revalidate = 60;
+
 export default async function SSRPage() {
   const { element, serverLoadTime, serverApiCallCount } =
     await getSectionServerContent();
