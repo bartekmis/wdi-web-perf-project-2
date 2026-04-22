@@ -19,15 +19,33 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  
+
   return (
     <html lang="en">
       <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="4b11e694-66f4-4a7d-bb1f-a772d4748d97"
+          data-blockingmode="auto"
+          type="text/javascript"
+          strategy="beforeInteractive"
+        />
+        {/* Preconnect to external domains */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="preconnect" href="https://www.termsfeed.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin=""
+        />
+
+        {/* Optimized GTM loading */}
         {gtmId && (
-          <script
+          <Script
+            id="gtm"
+            strategy="afterInteractive"
             dangerouslySetInnerHTML={{
               __html: `
                 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -39,47 +57,35 @@ export default async function RootLayout({
             }}
           />
         )}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script type="text/javascript" src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
-        <script 
-          type="text/javascript" 
+        {/* Optimized CMP loading */}
+        <Script
+          src="https://www.termsfeed.com/public/cookie-consent/4.2.0/cookie-consent.js"
+          strategy="lazyOnload"
+        />
+        <Script
+          id="cookie-consent"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
               document.addEventListener('DOMContentLoaded', function () {
                 cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
               });
-            `
+            `,
           }}
         />
-        <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed</a></noscript>
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            @font-face {
-              font-family: 'roboto-font';
-              src: url('/fonts/roboto-font.woff2') format('woff2');
-              font-weight: normal;
-              font-style: normal;
-              font-display: swap;
-            }
-
-            h1, h2 {
-              font-family: 'roboto-font', sans-serif;
-              font-weight: 700;
-            }
-          `
-        }} />
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <QueryProvider>{children}</QueryProvider>
-          <footer className="bg-gray-800 text-white py-8 mt-auto">
+          <footer
+            className="bg-gray-800 text-white py-8 mt-auto"
+            style={{ contentVisibility: "auto", containIntrinsicSize: "200px" }}
+          >
             <div className="container mx-auto px-4 text-center">
               <h3 className="text-lg font-semibold mb-4">
-                Performance Demonstration...
+                Performance Demonstration.
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
                 <div>
@@ -105,6 +111,28 @@ export default async function RootLayout({
             </div>
           </footer>
         </div>
+
+        {/* DataLayer optimization script */}
+        <Script
+          id="dataLayer-optimization"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              window.onload = () => {
+                  const originalDataLayerPush = dataLayer.push;
+
+                  dataLayer.push = (...args) => {
+                      requestAnimationFrame(() => {
+                         setTimeout(() => {
+                              originalDataLayerPush(...args);
+                         }, 0);
+                      });
+                  };
+              };
+            `,
+          }}
+        />
       </body>
     </html>
   );
