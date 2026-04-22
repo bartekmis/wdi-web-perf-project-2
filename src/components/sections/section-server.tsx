@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { JobCard } from "@/components/ui/job-card";
 import { Job } from "@/types/job";
 
@@ -108,8 +109,7 @@ export async function getSectionServerContent() {
                   i: number
                 ) => (
                   <div key={i} className="flex flex-col items-center gap-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={person.image}
                       alt={person.name}
                       width={64}
