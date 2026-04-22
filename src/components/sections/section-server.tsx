@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import Image from "next/image";
 import { JobCard } from "@/components/ui/job-card";
 import { Job } from "@/types/job";
@@ -8,7 +9,7 @@ async function fetchJobs() {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
-    { next: { revalidate: 60 } }
+    { next: { revalidate: 600 } }
   );
   if (!res.ok) throw new Error("Failed to fetch jobs");
   return res.json();
@@ -18,7 +19,7 @@ async function fetchAllJobsForCategories() {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
-    { next: { revalidate: 60 } }
+    { next: { revalidate: 600 } }
   );
   if (!res.ok) throw new Error("Failed to fetch jobs");
   return res.json();
@@ -26,9 +27,12 @@ async function fetchAllJobsForCategories() {
 
 async function fetchFeaturedProfessionals() {
   serverApiCallCount++;
-  const res = await fetch(`https://dummyjson.com/users?limit=5&skip=0`, {
-    next: { revalidate: 60 },
-  });
+  const res = await fetch(
+    `https://dummyjson.com/users?limit=5&skip=0&select=firstName,lastName,image,company`,
+    {
+      next: { revalidate: 600 },
+    }
+  );
   if (!res.ok) throw new Error("Failed to fetch featured professionals");
   const data = await res.json();
 
@@ -40,7 +44,7 @@ async function fetchFeaturedProfessionals() {
       company: { name: string };
     }) => ({
       name: `${user.firstName} ${user.lastName}`,
-      image: user.image,
+      image: user.image.replace("/128", "/64"),
       company: user.company.name,
     })
   );
@@ -60,18 +64,21 @@ export async function getSectionServerContent() {
   const categories = [
     ...new Set(categoriesData.map((job: Job) => job.category)),
   ];
-  console.log(`[SERVER] Processed ${categories.length} categories.`);
-  console.log(
-    `[SERVER] Featured professionals: fetched ${featuredProfessionals.length} users in 1 request`
-  );
 
   const end = performance.now();
   const serverLoadTime = end - start;
-  console.log(
-    `[SERVER] Server-Side Rendered (SSR) content loaded in: ${serverLoadTime.toFixed(
-      2
-    )}ms`
-  );
+
+  after(() => {
+    console.log(`[SERVER] Processed ${categories.length} categories.`);
+    console.log(
+      `[SERVER] Featured professionals: fetched ${featuredProfessionals.length} users in 1 request`
+    );
+    console.log(
+      `[SERVER] Server-Side Rendered (SSR) content loaded in: ${serverLoadTime.toFixed(
+        2
+      )}ms`
+    );
+  });
 
   const element = (
     <>
@@ -113,6 +120,8 @@ export async function getSectionServerContent() {
                       width={64}
                       height={64}
                       className="rounded-full object-cover"
+                      priority={i === 0}
+                      unoptimized
                     />
                     <p className="text-xs font-medium text-gray-700">
                       {person.name}
