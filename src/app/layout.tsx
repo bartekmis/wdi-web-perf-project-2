@@ -4,6 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { Verbose } from "@/components/Verbose/Verbose";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -104,6 +105,7 @@ export default async function RootLayout({
               </div>
             </div>
           </footer>
+          <Verbose />
         </div>
       </body>
     </html>
