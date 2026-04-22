@@ -53,6 +53,12 @@ export default async function RootLayout({
             `
           }}
         />
+        <script 
+          id="Cookiebot" 
+          src="https://consent.cookiebot.com/uc.js" 
+          data-cbid="YOUR-UNIQUE-ID" 
+          type="text/javascript">
+        </script>
         <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed</a></noscript>
         <style dangerouslySetInnerHTML={{
           __html: `
