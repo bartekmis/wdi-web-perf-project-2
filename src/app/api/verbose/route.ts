@@ -1,20 +1,8 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies, draftMode } from 'next/headers';
 
-const internalIps = ['::1', '10.', '127.'];
 
-export async function GET(request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for');
-  const cloudFlareInternalUser = request.headers.get('internal-user');
-
-  const isInInternalNetwork =
-    internalIps.some((internalIp) => ip?.startsWith(internalIp)) ||
-    cloudFlareInternalUser === '1';
-
-  if (!isInInternalNetwork) {
-    return NextResponse.json({});
-  }
-
+export async function GET() {
   const cookieStore = await cookies();
   const verboseCookie = cookieStore
     .getAll()
