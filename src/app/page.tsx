@@ -3,25 +3,6 @@ import Link from "next/link";
 export default function Home() {
   return (
     <>
-      <link rel="stylesheet" type="text/css" href="https://cdn.wpcc.io/lib/1.0.2/cookieconsent.min.css"/>
-      <script src="https://cdn.wpcc.io/lib/1.0.2/cookieconsent.min.js" defer></script>
-      <script dangerouslySetInnerHTML={{
-        __html: `
-          window.addEventListener("load", function(){
-            window.wpcc.init({
-              "border":"thin",
-              "colors":{
-                "popup":{"background":"#ffffff","text":"#000000","border":"#f1273b"},
-                "button":{"background":"#0085ff","text":"#ffffff"}
-              },
-              "content":{
-                "href":"/privacy-policy/",
-                "button":"Continue"
-              }
-            })
-          });
-        `
-      }} />
       <div className="container mx-auto px-4 py-16 text-center">
       <h1 className="text-5xl font-bold text-gray-900 mb-6">
         Demo Wydajności Next.js
