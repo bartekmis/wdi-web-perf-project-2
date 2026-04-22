@@ -25,41 +25,6 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        {gtmId && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','${gtmId}');
-              `,
-            }}
-          />
-        )}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script
-          type="text/javascript"
-          src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"
-        ></script>
-        <script
-          type="text/javascript"
-          dangerouslySetInnerHTML={{
-            __html: `
-              document.addEventListener('DOMContentLoaded', function () {
-                cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
-              });
-            `,
-          }}
-        />
-        <noscript>
-          Free cookie consent management tool by{" "}
-          <a href="https://www.termsfeed.com/">TermsFeed</a>
-        </noscript>
         <style
           dangerouslySetInnerHTML={{
             __html: `
@@ -81,6 +46,49 @@ export default async function RootLayout({
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
+        {/* beforeInteractive: must intercept other scripts before they run */}
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="45675568-7e90-41fe-905c-7ccfafd6c799"
+          data-blockingmode="auto"
+          strategy="beforeInteractive"
+        />
+        {/* afterInteractive: analytics, no need to block rendering */}
+        {gtmId && (
+          <Script
+            id="gtm"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                })(window,document,'script','dataLayer','${gtmId}');
+              `,
+            }}
+          />
+        )}
+        <Script
+          id="recaptcha"
+          src={recaptchaScript}
+          strategy="afterInteractive"
+        />
+        <Script
+          id="termsfeed"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              var s = document.createElement('script');
+              s.src = 'https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js';
+              s.onload = function() {
+                window.cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
+              };
+              document.head.appendChild(s);
+            `,
+          }}
+        />
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <QueryProvider>{children}</QueryProvider>
