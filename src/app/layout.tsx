@@ -24,55 +24,16 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
-          id="Cookiebot"
-          src="https://consent.cookiebot.com/uc.js"
-          data-cbid="4b11e694-66f4-4a7d-bb1f-a772d4748d97"
-          data-blockingmode="auto"
-          type="text/javascript"
-          strategy="beforeInteractive"
-        />
-        {/* Preconnect to external domains */}
-        <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <link rel="preconnect" href="https://www.termsfeed.com" />
         <link
           rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
+          href="https://dummyjson.com"
+          crossOrigin="anonymous"
         />
-
-        {/* Optimized GTM loading */}
+        <link rel="dns-prefetch" href="https://dummyjson.com" />
         {gtmId && (
-          <Script
-            id="gtm"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','${gtmId}');
-              `,
-            }}
-          />
+          <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         )}
-        {/* Optimized CMP loading */}
-        <Script
-          src="https://www.termsfeed.com/public/cookie-consent/4.2.0/cookie-consent.js"
-          strategy="lazyOnload"
-        />
-        <Script
-          id="cookie-consent"
-          strategy="lazyOnload"
-          dangerouslySetInnerHTML={{
-            __html: `
-              document.addEventListener('DOMContentLoaded', function () {
-                cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
-              });
-            `,
-          }}
-        />
+        <link rel="dns-prefetch" href="https://www.termsfeed.com" />
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
@@ -112,24 +73,49 @@ export default async function RootLayout({
           </footer>
         </div>
 
-        {/* DataLayer optimization script */}
+        {gtmId && (
+          <Script
+            id="gtm"
+            strategy="lazyOnload"
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                })(window,document,'script','dataLayer','${gtmId}');
+              `,
+            }}
+          />
+        )}
+
         <Script
-          id="dataLayer-optimization"
-          strategy="beforeInteractive"
+          id="cookie-consent-lib"
+          src="https://www.termsfeed.com/public/cookie-consent/4.2.0/cookie-consent.js"
+          strategy="lazyOnload"
+        />
+        <Script
+          id="cookie-consent-init"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `
-              window.dataLayer = window.dataLayer || [];
-              window.onload = () => {
-                  const originalDataLayerPush = dataLayer.push;
-
-                  dataLayer.push = (...args) => {
-                      requestAnimationFrame(() => {
-                         setTimeout(() => {
-                              originalDataLayerPush(...args);
-                         }, 0);
-                      });
-                  };
-              };
+              (function run() {
+                if (window.cookieconsent && typeof window.cookieconsent.run === 'function') {
+                  window.cookieconsent.run({
+                    notice_banner_type: "simple",
+                    consent_type: "express",
+                    palette: "dark",
+                    language: "pl",
+                    page_load_consent_levels: ["strictly-necessary"],
+                    notice_banner_reject_button_hide: false,
+                    preferences_center_close_button_hide: false,
+                    page_refresh_confirmation_buttons: false,
+                    website_name: "WDI Training"
+                  });
+                } else {
+                  setTimeout(run, 100);
+                }
+              })();
             `,
           }}
         />

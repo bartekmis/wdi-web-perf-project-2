@@ -39,6 +39,16 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/ssr",
+        headers: [
+          {
+            key: "Cache-Control",
+            value:
+              "public, max-age=0, s-maxage=30, stale-while-revalidate=300",
+          },
+        ],
+      },
     ];
   },
 };
