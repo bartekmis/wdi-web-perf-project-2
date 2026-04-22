@@ -34,24 +34,6 @@ export default async function RootLayout({
           type="text/javascript"
           async
         ></script>
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-            @font-face {
-              font-family: 'roboto-font';
-              src: url('/fonts/roboto-font.woff2') format('woff2');
-              font-weight: normal;
-              font-style: normal;
-              font-display: swap;
-            }
-
-            h1, h2 {
-              font-family: 'roboto-font', sans-serif;
-              font-weight: 700;
-            }
-          `,
-          }}
-        />
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
