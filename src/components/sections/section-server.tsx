@@ -32,7 +32,7 @@ async function fetchFeaturedProfessionals() {
   serverApiCallCount++;
   const res = await fetch(
     `https://dummyjson.com/users?limit=5`,
-    { cache: "no-store" }
+    { next: { revalidate: 3600 } }
   );
   if (!res.ok) throw new Error("Failed to fetch featured professionals");
   const data = await res.json();

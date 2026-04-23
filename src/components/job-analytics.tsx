@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -196,10 +197,8 @@ function generateAnalyticsData() {
   };
 }
 
-const ANALYTICS_DATA = generateAnalyticsData();
-
 export function JobAnalytics() {
-  const { dailyData, categoryStats, summary } = ANALYTICS_DATA;
+  const { dailyData, categoryStats, summary } = useMemo(() => generateAnalyticsData(), []);
 
   const last90Days = dailyData.slice(0, 90).reverse();
 

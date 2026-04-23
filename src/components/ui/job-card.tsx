@@ -227,7 +227,7 @@ export const JobCard = ({
         </div>
       )}
 
-      <Link href={`/offers/${job.id}`} className="block">
+      <Link href={`/offers/${job.id}`} prefetch={false} className="block">
         <div
           className={cn(
             "w-full text-white py-2 px-4 rounded transition-colors",
