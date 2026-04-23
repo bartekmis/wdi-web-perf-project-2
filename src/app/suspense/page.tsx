@@ -1,9 +1,9 @@
 import { PerformanceMonitor } from "@/components/performance-monitor";
 import { getSectionSuspenseContent } from "@/components/sections/section-suspense";
 
-export default async function SuspensePage() {
+export default function SuspensePage() {
   const { element, serverLoadTime, serverApiCallCount } =
-    await getSectionSuspenseContent();
+    getSectionSuspenseContent();
 
   return (
     <>

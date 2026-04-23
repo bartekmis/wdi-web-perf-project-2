@@ -46,6 +46,11 @@ interface JobsSuspenseContentProps {
   jobs: Job[];
   serverLoadTime: number;
 }
+async function JobsSuspenseLoader() {
+  const { jobs, serverLoadTime } = await getSuspenseJobs();
+  return <JobsSuspenseContent jobs={jobs} serverLoadTime={serverLoadTime} />;
+}
+
 export const JobsSuspenseContent: React.FC<JobsSuspenseContentProps> = ({
   jobs,
   serverLoadTime,
@@ -111,9 +116,8 @@ export const SuspenseLoadingSkeleton = () => (
   </div>
 );
 
-export async function getSectionSuspenseContent() {
+export function getSectionSuspenseContent() {
   serverApiCallCount = 0;
-  const { jobs, serverLoadTime } = await getSuspenseJobs();
 
   const element = (
     <section className="py-12 bg-purple-50">
@@ -126,10 +130,10 @@ export async function getSectionSuspenseContent() {
         </div>
 
         <Suspense fallback={<SuspenseLoadingSkeleton />}>
-          <JobsSuspenseContent jobs={jobs} serverLoadTime={serverLoadTime} />
+          <JobsSuspenseLoader />
         </Suspense>
       </div>
     </section>
   );
-  return { element, serverLoadTime, serverApiCallCount };
+  return { element, serverLoadTime: 0, serverApiCallCount };
 }
