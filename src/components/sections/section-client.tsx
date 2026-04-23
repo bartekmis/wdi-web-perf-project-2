@@ -1,110 +1,89 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { JobCard } from "@/components/ui/job-card";
-import axios from "axios";
+
+// Hoisted module-level constants — never recreated on render
+const POSITION_ORDER = { Junior: 1, Mid: 2, Senior: 3 } as const;
+const JOB_METADATA = { renderType: "CSR - Client Side Rendered" };
 
 export const SectionClient = () => {
-  const [duration, setDuration] = useState<number>(0);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
   const [sortBy, setSortBy] = useState<string>("newest");
-  const [filterQuery, setFilterQuery] = useState<string>("");
+  // null = no search active; Job[] = search results (may be empty)
+  const [searchResults, setSearchResults] = useState<Job[] | null>(null);
+  // Uncontrolled input — no re-render on every keystroke
+  const filterQueryRef = useRef<HTMLInputElement>(null);
+  // Ref so the event listener registered once can always read current allJobs
+  const allJobsRef = useRef<Job[]>([]);
 
-  const { data: allJobs = [], isLoading } = useQuery({
+  // Duration returned from query result, not set as a side effect inside queryFn
+  const { data, isLoading } = useQuery({
     queryKey: ["jobs-client"],
     queryFn: async () => {
       const start = performance.now();
-
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`);
-      const json = await res.json();
-
-      for (const job of json.slice(0, 6)) {
-        try {
-          const detailsRes = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-          );
-          const jobDetails = detailsRes.data.find((j: Job) => j.id === job.id);
-          console.log(`Refetched details for job: ${jobDetails?.role}`);
-        } catch {
-          console.log("Failed to refetch job details");
-        }
-      }
-
-      const end = performance.now();
-      setDuration(end - start);
-      return json;
+      const jobs: Job[] = await res.json();
+      return { jobs, duration: performance.now() - start };
     },
-    staleTime: 0,
+    staleTime: 60_000,
     refetchOnWindowFocus: true,
   });
 
+  const allJobs = data?.jobs ?? [];
+  const duration = data?.duration ?? 0;
+
+  // Keep ref current so event handlers (registered once) see fresh data
   useEffect(() => {
-    if (allJobs.length > 0) {
-      const fetchAndProcess = async () => {
-        try {
-          const res = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-          );
-          const jobs = res.data;
+    allJobsRef.current = allJobs;
+  }, [allJobs]);
 
-          let processed = jobs.filter((_: Job, index: number) => index < 6);
-
-          if (sortBy === "company") {
-            processed = processed.sort((a: Job, b: Job) =>
-              a.companyName.localeCompare(b.companyName)
-            );
-          } else if (sortBy === "position") {
-            const positionOrder = { Junior: 1, Mid: 2, Senior: 3 };
-            processed = processed.sort(
-              (a: Job, b: Job) =>
-                (positionOrder[a.position as keyof typeof positionOrder] || 0) -
-                (positionOrder[b.position as keyof typeof positionOrder] || 0)
-            );
-          }
-
-          setFilteredJobs(processed);
-        } catch {
-          console.log("Processing failed");
-        }
-      };
-
-      fetchAndProcess();
+  // Derived display list — no state, no effect, no extra fetch
+  const displayJobs = useMemo(() => {
+    const base = (searchResults ?? allJobs).slice(0, 6);
+    if (sortBy === "company") {
+      return [...base].sort((a, b) => a.companyName.localeCompare(b.companyName));
     }
-  }, [allJobs, sortBy]);
+    if (sortBy === "position") {
+      return [...base].sort(
+        (a, b) =>
+          (POSITION_ORDER[a.position as keyof typeof POSITION_ORDER] || 0) -
+          (POSITION_ORDER[b.position as keyof typeof POSITION_ORDER] || 0)
+      );
+    }
+    return base;
+  }, [searchResults, allJobs, sortBy]);
 
+  // Listeners registered once — allJobsRef used for current data instead of closure capture
   useEffect(() => {
     const handleSearch = (event: CustomEvent) => {
       const fetchFilteredJobs = async () => {
         const { queryString } = event.detail;
-
         const apiUrl = queryString
           ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?${queryString}`
           : `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`;
 
         try {
-          const res = await axios.get(apiUrl);
-          const jobs: Job[] = res.data;
+          const res = await fetch(apiUrl);
+          const jobs: Job[] = await res.json();
+          const results = jobs.slice(0, 6);
 
-          for (const job of jobs.slice(0, 6)) {
-            const categoryRes = await axios.get(
-              `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-            );
-            const allJobs: Job[] = categoryRes.data;
-            const sameCategory = allJobs.filter(
-              (j: Job) => j.category === job.category
+          // Category counts computed from already-cached allJobsRef — no extra fetch
+          results.forEach((job) => {
+            const sameCategory = allJobsRef.current.filter(
+              (j) => j.category === job.category
             );
             console.log(
               `Job ${job.role} has ${sameCategory.length} jobs in same category`
             );
-          }
+          });
 
-          setFilteredJobs(jobs.slice(0, 6));
+          setSearchResults(results);
         } catch (error) {
           console.error("Search failed:", error);
-          setFilteredJobs(allJobs.slice(0, 6));
+          setSearchResults(allJobsRef.current.slice(0, 6));
         }
       };
 
@@ -122,7 +101,12 @@ export const SectionClient = () => {
       window.removeEventListener("jobSearch", handleSearch as EventListener);
       window.removeEventListener("jobSort", handleSort as EventListener);
     };
-  }, [allJobs]);
+  }, []); // empty deps — stable registration, current data via ref
+
+  // Stable callback — no unnecessary re-renders of JobCard
+  const handleApply = useCallback((job: Job) => {
+    console.log(`Viewing offer: ${job.role}`);
+  }, []);
 
   if (isLoading) {
     return (
@@ -192,9 +176,9 @@ export const SectionClient = () => {
           </div>
           <div>
             <input
+              ref={filterQueryRef}
               type="text"
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
+              defaultValue=""
               placeholder="Filtruj po nazwie stanowiska..."
               className="border rounded px-4 py-2 w-full md:w-64"
             />
@@ -202,7 +186,8 @@ export const SectionClient = () => {
           <button
             onClick={() => {
               const queryParams = new URLSearchParams();
-              if (filterQuery) queryParams.append("role", filterQuery);
+              const query = filterQueryRef.current?.value;
+              if (query) queryParams.append("role", query);
               window.dispatchEvent(
                 new CustomEvent("jobSearch", {
                   detail: { queryString: queryParams.toString() },
@@ -215,33 +200,17 @@ export const SectionClient = () => {
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(filteredJobs.length > 0 ? filteredJobs : allJobs.slice(0, 6)).map(
-            (job: Job) => (
-              <JobCard
-                key={job.id}
-                job={job}
-                variant="client"
-                showMetadata={true}
-                metadata={{
-                  renderType: "CSR - Client Side Rendered",
-                }}
-                buttonText="See offer"
-                onApply={async (job) => {
-                  try {
-                    const res = await axios.get(
-                      `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs`
-                    );
-                    const jobDetails = res.data.find(
-                      (j: Job) => j.id === job.id
-                    );
-                    console.log(`Viewing offer: ${jobDetails?.role}`);
-                  } catch {
-                    console.log("API call failed");
-                  }
-                }}
-              />
-            )
-          )}
+          {displayJobs.map((job: Job) => (
+            <JobCard
+              key={job.id}
+              job={job}
+              variant="client"
+              showMetadata={true}
+              metadata={JOB_METADATA}
+              buttonText="See offer"
+              onApply={handleApply}
+            />
+          ))}
         </div>
       </div>
     </section>
