@@ -80,16 +80,41 @@ export default async function RootLayout({
         </div>
 
         {gtmId && (
+          /*
+           * Defer GTM until first user interaction (or 5 s fallback) so it
+           * doesn't compete with main-thread work during the FCP→TTI window.
+           * GTM fires Clarity, which is the heaviest tag and the primary
+           * driver of Total Blocking Time on throttled devices.
+           */
           <Script
             id="gtm"
             strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `
-                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','${gtmId}');
+                (function deferGTM() {
+                  var fired = false;
+                  var events = ['pointerdown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
+
+                  function initGTM() {
+                    if (fired) return;
+                    fired = true;
+                    events.forEach(function(e) {
+                      window.removeEventListener(e, initGTM, { capture: true });
+                    });
+                    (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                    })(window,document,'script','dataLayer','${gtmId}');
+                  }
+
+                  events.forEach(function(e) {
+                    window.addEventListener(e, initGTM, { once: true, passive: true, capture: true });
+                  });
+
+                  // Fallback: load after page is stable but before Cookiebot (12 s)
+                  setTimeout(initGTM, 5000);
+                })();
               `,
             }}
           />

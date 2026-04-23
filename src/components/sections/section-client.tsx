@@ -6,6 +6,18 @@ import { Job } from "@/types/job";
 import { Card } from "@/components/ui/card";
 import { JobCard } from "@/components/ui/job-card";
 import axios from "axios";
+import { incrementApiCallCount } from "@/lib/api-monitor";
+
+// Track all axios calls for the client-side API counter in PerformanceMonitor.
+// Runs once at module scope — CSR-only component, so this never loads on SSR pages.
+axios.interceptors.request.use(
+  (config) => {
+    incrementApiCallCount();
+    console.log(`[AXIOS] API Call: ${config.method?.toUpperCase()} ${config.url}`);
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 export const SectionClient = () => {
   const [duration, setDuration] = useState<number>(0);
