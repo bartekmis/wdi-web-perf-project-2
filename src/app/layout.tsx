@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
+import { preconnect, prefetchDNS } from "react-dom";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
@@ -26,24 +27,34 @@ export default async function RootLayout({
   const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
 
+  if (process.env.NODE_ENV === "production") {
+    // Cookiebot loads afterInteractive — preconnect so DNS+TCP+TLS is ready
+    preconnect("https://consent.cookiebot.com");
+  }
+  // GTM and reCAPTCHA are lazyOnload — prefetchDNS is enough
+  prefetchDNS("https://www.googletagmanager.com");
+  prefetchDNS("https://www.google.com");
+
   return (
     <html lang="en">
       <head>
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
-        {/* beforeInteractive: must intercept other scripts before they run */}
-        <Script
-          id="Cookiebot"
-          src="https://consent.cookiebot.com/uc.js"
-          data-cbid="45675568-7e90-41fe-905c-7ccfafd6c799"
-          data-blockingmode="auto"
-          strategy="afterInteractive"
-        />
+        {/* Consent management — skip on localhost (CBID is domain-specific, 404s on dev) */}
+        {process.env.NODE_ENV === "production" && (
+          <Script
+            id="Cookiebot"
+            src="https://consent.cookiebot.com/uc.js"
+            data-cbid="45675568-7e90-41fe-905c-7ccfafd6c799"
+            data-blockingmode="auto"
+            strategy="afterInteractive"
+          />
+        )}
         {gtmId && (
           <Script
             id="gtm"
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             dangerouslySetInnerHTML={{
               __html: `
                 (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -58,21 +69,7 @@ export default async function RootLayout({
         <Script
           id="recaptcha"
           src={recaptchaScript}
-          strategy="afterInteractive"
-        />
-        <Script
-          id="termsfeed"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              var s = document.createElement('script');
-              s.src = 'https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js';
-              s.onload = function() {
-                window.cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
-              };
-              document.head.appendChild(s);
-            `,
-          }}
+          strategy="lazyOnload"
         />
         <div className="min-h-screen flex flex-col">
           <Navbar />
