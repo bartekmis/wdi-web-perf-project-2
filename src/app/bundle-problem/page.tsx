@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { JobAnalytics } from "@/components/job-analytics";
+import dynamic from "next/dynamic";
+
+const JobAnalytics = dynamic(
+  () => import("@/components/job-analytics").then((m) => ({ default: m.JobAnalytics })),
+  { ssr: false },
+);
 
 type Job = {
   id: string;
