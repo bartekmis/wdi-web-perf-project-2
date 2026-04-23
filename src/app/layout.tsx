@@ -5,7 +5,11 @@ import './globals.css';
 import { Navbar } from '@/components/navbar';
 import { QueryProvider } from '@/components/providers/query-provider';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: ['system-ui', 'arial'],
+});
 
 export const metadata: Metadata = {
   title: 'Job hunter Performance Demo',
@@ -34,6 +38,13 @@ export default async function RootLayout({
           crossOrigin="anonymous"
         />
         <link rel="dns-prefetch" href="https://www.gstatic.com" />
+        <link
+          rel="preload"
+          href="/fonts/roboto-font.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         {gtmId && (
           <script
