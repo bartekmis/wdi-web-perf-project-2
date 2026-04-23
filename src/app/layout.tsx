@@ -46,7 +46,7 @@ export default async function RootLayout({
             })(window,document,'script','dataLayer','${gtmId}');
           `}</Script>
         )}
-        <Script src={recaptchaScript} strategy="afterInteractive" />
+        <Script src={recaptchaScript} strategy="lazyOnload" />
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <QueryProvider>{children}</QueryProvider>
