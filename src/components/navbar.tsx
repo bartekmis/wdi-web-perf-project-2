@@ -19,6 +19,7 @@ export const Navbar = () => {
           <div className="text-xl font-bold">Job Hub</div>
           <Link
             href="/bundle-problem"
+            prefetch={false}
             className="text-sm hover:text-blue-200 transition-colors"
           >
             Bundle Problem Page
@@ -29,6 +30,7 @@ export const Navbar = () => {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className="hover:text-blue-200 transition-colors duration-200 px-3 py-2 rounded"
             >
               {item.label}
