@@ -8,7 +8,7 @@ async function fetchJobs() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
     {
-      cache: "no-store",
+      next: { revalidate: 120 },
     }
   );
   if (!res.ok) {
@@ -22,7 +22,7 @@ async function fetchAllJobsForCategories() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
     {
-      cache: "no-store",
+      next: { revalidate: 120 },
     }
   );
   if (!res.ok) {
@@ -32,28 +32,29 @@ async function fetchAllJobsForCategories() {
 }
 
 async function fetchFeaturedProfessionals() {
-  const allUsers: {
-    firstName: string;
-    lastName: string;
-    image: string;
-    company: { name: string };
-  }[] = [];
+  serverApiCallCount++;
 
-  for (let page = 0; page < 5; page++) {
-    serverApiCallCount++;
-    const res = await fetch(
-      `https://dummyjson.com/users?limit=30&skip=${page * 30}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error("Failed to fetch featured professionals");
-    const data = await res.json();
-    allUsers.push(...data.users);
+  const res = await fetch("https://dummyjson.com/users?limit=5&skip=0", {
+    next: { revalidate: 120 },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch featured professionals");
   }
 
-  return allUsers.slice(0, 5).map((user) => ({
+  const data: {
+    users: Array<{
+      firstName: string;
+      lastName: string;
+      image: string;
+      company?: { name?: string };
+    }>;
+  } = await res.json();
+
+  return data.users.map((user) => ({
     name: `${user.firstName} ${user.lastName}`,
     image: user.image,
-    company: user.company.name,
+    company: user.company?.name ?? "Unknown company",
   }));
 }
 
@@ -61,9 +62,11 @@ export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
-  const jobsData = await fetchJobs();
-  const categoriesData = await fetchAllJobsForCategories();
-  const featuredProfessionals = await fetchFeaturedProfessionals();
+  const [jobsData, categoriesData, featuredProfessionals] = await Promise.all([
+    fetchJobs(),
+    fetchAllJobsForCategories(),
+    fetchFeaturedProfessionals(),
+  ]);
 
   const jobs: Job[] = jobsData;
   const categories = [

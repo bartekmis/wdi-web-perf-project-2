@@ -5,7 +5,11 @@ import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({
+  subsets: ["latin"],
+  preload: false,
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Job hunter Performance Demo",
@@ -19,7 +23,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  const recaptchaScript = recaptchaSiteKey
+    ? `https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`
+    : null;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
   
   return (
@@ -39,8 +46,12 @@ export default async function RootLayout({
             }}
           />
         )}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
+        {recaptchaScript && (
+          <Script
+            src={recaptchaScript}
+            strategy="afterInteractive"
+          />
+        )}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script type="text/javascript" src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
         <script 
