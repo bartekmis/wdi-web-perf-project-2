@@ -38,6 +38,8 @@ export default async function RootLayout({
           crossOrigin="anonymous"
         />
         <link rel="dns-prefetch" href="https://www.gstatic.com" />
+        <link rel="preconnect" href="https://dummyjson.com" />
+        <link rel="dns-prefetch" href="https://dummyjson.com" />
         <link
           rel="preload"
           href="/fonts/roboto-font.woff2"

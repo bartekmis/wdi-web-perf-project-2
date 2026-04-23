@@ -1,5 +1,6 @@
-import { JobCard } from "@/components/ui/job-card";
-import { Job } from "@/types/job";
+import Image from 'next/image';
+import { JobCard } from '@/components/ui/job-card';
+import { Job } from '@/types/job';
 
 let serverApiCallCount = 0;
 
@@ -8,11 +9,11 @@ async function fetchJobs() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
     {
-      cache: "no-store",
-    }
+      next: { revalidate: 300 },
+    },
   );
   if (!res.ok) {
-    throw new Error("Failed to fetch jobs");
+    throw new Error('Failed to fetch jobs');
   }
   return res.json();
 }
@@ -22,48 +23,45 @@ async function fetchAllJobsForCategories() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
     {
-      cache: "no-store",
-    }
+      next: { revalidate: 300 },
+    },
   );
   if (!res.ok) {
-    throw new Error("Failed to fetch jobs");
+    throw new Error('Failed to fetch jobs');
   }
   return res.json();
 }
 
 async function fetchFeaturedProfessionals() {
-  const allUsers: {
-    firstName: string;
-    lastName: string;
-    image: string;
-    company: { name: string };
-  }[] = [];
+  const res = await fetch(`https://dummyjson.com/users?limit=5&skip=0`, {
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error('Failed to fetch featured professionals');
+  const data = await res.json();
 
-  for (let page = 0; page < 5; page++) {
-    serverApiCallCount++;
-    const res = await fetch(
-      `https://dummyjson.com/users?limit=30&skip=${page * 30}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error("Failed to fetch featured professionals");
-    const data = await res.json();
-    allUsers.push(...data.users);
-  }
-
-  return allUsers.slice(0, 5).map((user) => ({
-    name: `${user.firstName} ${user.lastName}`,
-    image: user.image,
-    company: user.company.name,
-  }));
+  return data.users.map(
+    (user: {
+      firstName: string;
+      lastName: string;
+      image: string;
+      company: { name: string };
+    }) => ({
+      name: `${user.firstName} ${user.lastName}`,
+      image: user.image,
+      company: user.company.name,
+    }),
+  );
 }
 
 export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
-  const jobsData = await fetchJobs();
-  const categoriesData = await fetchAllJobsForCategories();
-  const featuredProfessionals = await fetchFeaturedProfessionals();
+  const [jobsData, categoriesData, featuredProfessionals] = await Promise.all([
+    fetchJobs(),
+    fetchAllJobsForCategories(),
+    fetchFeaturedProfessionals(),
+  ]);
 
   const jobs: Job[] = jobsData;
   const categories = [
@@ -71,15 +69,15 @@ export async function getSectionServerContent() {
   ];
   console.log(`[SERVER] Processed ${categories.length} categories.`);
   console.log(
-    `[SERVER] Featured professionals: fetched 150 users in 5 sequential requests to display ${featuredProfessionals.length}`
+    `[SERVER] Featured professionals: fetched 5 users in 1 request to display ${featuredProfessionals.length}`,
   );
 
   const end = performance.now();
   const serverLoadTime = end - start;
   console.log(
     `[SERVER] Server-Side Rendered (SSR) content loaded in: ${serverLoadTime.toFixed(
-      2
-    )}ms`
+      2,
+    )}ms`,
   );
 
   const element = (
@@ -114,11 +112,10 @@ export async function getSectionServerContent() {
               {featuredProfessionals.map(
                 (
                   person: { name: string; image: string; company: string },
-                  i: number
+                  i: number,
                 ) => (
                   <div key={i} className="flex flex-col items-center gap-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={person.image}
                       alt={person.name}
                       width={64}
@@ -130,11 +127,11 @@ export async function getSectionServerContent() {
                     </p>
                     <p className="text-xs text-gray-400">{person.company}</p>
                   </div>
-                )
+                ),
               )}
             </div>
             <p className="text-xs text-gray-400 mt-3">
-              Source: External API (150 records fetched in 5 sequential requests to display 5)
+              Source: External API (5 records fetched in 1 request to display 5)
             </p>
           </div>
 
@@ -150,7 +147,7 @@ export async function getSectionServerContent() {
                 buttonText="See offer"
                 showMetadata={true}
                 metadata={{
-                  renderType: "SSR - Server Side Rendered",
+                  renderType: 'SSR - Server Side Rendered',
                 }}
               />
             ))}
