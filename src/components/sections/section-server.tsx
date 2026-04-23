@@ -120,8 +120,6 @@ export async function getSectionServerContent() {
                       width={64}
                       height={64}
                       className="rounded-full object-cover"
-                      priority={i === 0}
-                      unoptimized
                     />
                     <p className="text-xs font-medium text-gray-700">
                       {person.name}
