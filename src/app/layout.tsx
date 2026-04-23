@@ -40,13 +40,6 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://www.gstatic.com" />
         <link rel="preconnect" href="https://dummyjson.com" />
         <link rel="dns-prefetch" href="https://dummyjson.com" />
-        <link
-          rel="preload"
-          href="/fonts/roboto-font.woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         {gtmId && (
           <script
@@ -63,10 +56,6 @@ export default async function RootLayout({
         )}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script
-          src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"
-          async
-        ></script>
-        <script
           type="text/javascript"
           dangerouslySetInnerHTML={{
             __html: `
@@ -74,28 +63,6 @@ export default async function RootLayout({
                 cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
               });
             `,
-          }}
-        />
-        <noscript>
-          Free cookie consent management tool by{' '}
-          <a href="https://www.termsfeed.com/">TermsFeed</a>
-        </noscript>
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-            @font-face {
-              font-family: 'roboto-font';
-              src: url('/fonts/roboto-font.woff2') format('woff2');
-              font-weight: normal;
-              font-style: normal;
-              font-display: swap;
-            }
-
-            h1, h2 {
-              font-family: 'roboto-font', sans-serif;
-              font-weight: 700;
-            }
-          `,
           }}
         />
         <meta name="robots" content="noindex, nofollow" />
