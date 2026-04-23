@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Script from "next/script";
 import {
   Dialog,
   DialogContent,
@@ -90,6 +91,12 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ offer }) => {
   };
 
   return (
+    <>
+    <Script
+      id="recaptcha"
+      src={`https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`}
+      strategy="afterInteractive"
+    />
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
@@ -164,5 +171,6 @@ export const ApplyModal: React.FC<ApplyModalProps> = ({ offer }) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    </>
   );
 };

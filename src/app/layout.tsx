@@ -24,16 +24,14 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
 
   if (process.env.NODE_ENV === "production") {
     // Cookiebot loads afterInteractive — preconnect so DNS+TCP+TLS is ready
     preconnect("https://consent.cookiebot.com");
   }
-  // GTM and reCAPTCHA are lazyOnload — prefetchDNS is enough
+  // GTM is lazyOnload — prefetchDNS is enough
   prefetchDNS("https://www.googletagmanager.com");
-  prefetchDNS("https://www.google.com");
 
   return (
     <html lang="en">
@@ -66,11 +64,6 @@ export default async function RootLayout({
             }}
           />
         )}
-        <Script
-          id="recaptcha"
-          src={recaptchaScript}
-          strategy="lazyOnload"
-        />
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <QueryProvider>{children}</QueryProvider>
