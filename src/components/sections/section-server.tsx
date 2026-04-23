@@ -32,23 +32,25 @@ async function fetchAllJobsForCategories() {
 }
 
 async function fetchFeaturedProfessionals() {
+  const pages = await Promise.all(
+    Array.from({ length: 5 }, (_, page) => {
+      serverApiCallCount++;
+      return fetch(
+        `https://dummyjson.com/users?limit=30&skip=${page * 30}`,
+        { cache: "no-store" }
+      ).then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch featured professionals");
+        return res.json();
+      });
+    })
+  );
+
   const allUsers: {
     firstName: string;
     lastName: string;
     image: string;
     company: { name: string };
-  }[] = [];
-
-  for (let page = 0; page < 5; page++) {
-    serverApiCallCount++;
-    const res = await fetch(
-      `https://dummyjson.com/users?limit=30&skip=${page * 30}`,
-      { cache: "no-store" }
-    );
-    if (!res.ok) throw new Error("Failed to fetch featured professionals");
-    const data = await res.json();
-    allUsers.push(...data.users);
-  }
+  }[] = pages.flatMap((data) => data.users);
 
   return allUsers.slice(0, 5).map((user) => ({
     name: `${user.firstName} ${user.lastName}`,
@@ -61,9 +63,11 @@ export async function getSectionServerContent() {
   serverApiCallCount = 0;
   const start = performance.now();
 
-  const jobsData = await fetchJobs();
-  const categoriesData = await fetchAllJobsForCategories();
-  const featuredProfessionals = await fetchFeaturedProfessionals();
+  const [jobsData, categoriesData, featuredProfessionals] = await Promise.all([
+    fetchJobs(),
+    fetchAllJobsForCategories(),
+    fetchFeaturedProfessionals(),
+  ]);
 
   const jobs: Job[] = jobsData;
   const categories = [
