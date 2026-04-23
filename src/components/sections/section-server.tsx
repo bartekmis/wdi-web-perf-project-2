@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { JobCard } from "@/components/ui/job-card";
 import { Job } from "@/types/job";
 
@@ -7,7 +8,7 @@ async function fetchJobs() {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
-    { next: { revalidate: 60 } }
+    { next: { revalidate: 600 } }
   );
   if (!res.ok) {
     throw new Error("Failed to fetch jobs");
@@ -19,7 +20,7 @@ async function fetchAllJobsForCategories() {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
-    { next: { revalidate: 60 } }
+    { next: { revalidate: 600 } }
   );
   if (!res.ok) {
     throw new Error("Failed to fetch jobs");
@@ -110,8 +111,7 @@ export async function getSectionServerContent() {
                   i: number
                 ) => (
                   <div key={i} className="flex flex-col items-center gap-1">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={person.image}
                       alt={person.name}
                       width={64}

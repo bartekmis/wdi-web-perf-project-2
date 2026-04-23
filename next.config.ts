@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
 			},
 			{
 				protocol: "https",
+				hostname: "dummyjson.com",
+				port: "",
+				pathname: "/**",
+			},
+			{
+				protocol: "https",
 				hostname: "jobs-api-ej8r.onrender.com",
 				port: "",
 				pathname: "/**",
