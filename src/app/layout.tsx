@@ -1,11 +1,18 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Roboto } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Navbar } from "@/components/navbar";
 import { QueryProvider } from "@/components/providers/query-provider";
 
 const inter = Inter({ subsets: ["latin"] });
+
+const roboto = Roboto({
+	subsets: ["latin"],
+	weight: ["700"],
+	variable: "--font-roboto",
+	display: "swap",
+});
 
 export const metadata: Metadata = {
 	title: "Job hunter Performance Demo",
@@ -50,7 +57,7 @@ export default async function RootLayout({
 				)}
 				<Script src={recaptchaScript} strategy="lazyOnload" />
 			</head>
-			<body className={inter.className}>
+			<body className={`${inter.className} ${roboto.variable}`}>
 				<div className="min-h-screen flex flex-col">
 					<Navbar />
 					<QueryProvider>{children}</QueryProvider>

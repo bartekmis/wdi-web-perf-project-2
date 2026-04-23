@@ -7,9 +7,7 @@ async function fetchJobs() {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=6`,
-    {
-      cache: "no-store",
-    }
+    { next: { revalidate: 60 } }
   );
   if (!res.ok) {
     throw new Error("Failed to fetch jobs");
@@ -21,9 +19,7 @@ async function fetchAllJobsForCategories() {
   serverApiCallCount++;
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/jobs?_limit=24`,
-    {
-      cache: "no-store",
-    }
+    { next: { revalidate: 60 } }
   );
   if (!res.ok) {
     throw new Error("Failed to fetch jobs");
