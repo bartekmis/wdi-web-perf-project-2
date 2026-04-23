@@ -8,7 +8,7 @@ export default function Home() {
       <script dangerouslySetInnerHTML={{
         __html: `
           window.addEventListener("load", function(){
-            window.wpcc.init({
+            window.wpcc?.init({
               "border":"thin",
               "colors":{
                 "popup":{"background":"#ffffff","text":"#000000","border":"#f1273b"},
