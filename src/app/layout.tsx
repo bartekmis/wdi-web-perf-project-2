@@ -25,6 +25,8 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="preconnect" href="https://consent.cookiebot.com" />
+        <link rel="dns-prefetch" href="https://consent.cookiebot.com" />
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         {gtmId && (
           <script
@@ -81,6 +83,13 @@ export default async function RootLayout({
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          type="text/javascript"
+          data-cbid="21f9c659-da4a-4f03-87a6-b6d097b4d054"
+          strategy="lazyOnload"
+        />
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <QueryProvider>{children}</QueryProvider>
