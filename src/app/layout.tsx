@@ -27,6 +27,13 @@ export default async function RootLayout({
       <head>
         <link rel="preconnect" href="https://consent.cookiebot.com" />
         <link rel="dns-prefetch" href="https://consent.cookiebot.com" />
+        <link rel="preconnect" href="https://www.google.com" />
+        <link
+          rel="preconnect"
+          href="https://www.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link rel="dns-prefetch" href="https://www.gstatic.com" />
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         {gtmId && (
           <script
@@ -42,11 +49,9 @@ export default async function RootLayout({
           />
         )}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script
-          type="text/javascript"
           src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"
+          async
         ></script>
         <script
           type="text/javascript"
@@ -86,10 +91,10 @@ export default async function RootLayout({
         <Script
           id="Cookiebot"
           src="https://consent.cookiebot.com/uc.js"
-          type="text/javascript"
           data-cbid="21f9c659-da4a-4f03-87a6-b6d097b4d054"
-          strategy="lazyOnload"
+          strategy="afterInteractive"
         />
+        <Script id="recaptcha" src={recaptchaScript} strategy="lazyOnload" />
         <div className="min-h-screen flex flex-col">
           <Navbar />
           <QueryProvider>{children}</QueryProvider>
