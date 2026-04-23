@@ -107,7 +107,7 @@ export async function getSectionServerContent() {
             <p className="text-sm font-semibold text-gray-700 mb-3">
               Featured Professionals
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               {featuredProfessionals.map(
                 (
                   person: { name: string; image: string; company: string },
