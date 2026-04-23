@@ -19,43 +19,23 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const recaptchaScript = `https://www.google.com/recaptcha/api.js?render=${process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}`;
+  const recaptchaSiteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  
+
   return (
     <html lang="en">
       <head>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        {gtmId && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-                })(window,document,'script','dataLayer','${gtmId}');
-              `,
-            }}
-          />
-        )}
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script src={recaptchaScript}></script>
-        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
-        <script type="text/javascript" src="https://www.termsfeedtest.com/public/cookie-consent/4.2.0/cookie-consent.js"></script>
-        <script 
-          type="text/javascript" 
+        <link rel="preconnect" href="https://www.google.com" />
+        <link
+          rel="preconnect"
+          href="https://www.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link rel="dns-prefetch" href="https://consent.cookiebot.com" />
+        <link rel="dns-prefetch" href="https://www.termsfeedtest.com" />
+        <style
           dangerouslySetInnerHTML={{
             __html: `
-              document.addEventListener('DOMContentLoaded', function () {
-                cookieconsent.run({"notice_banner_type":"express","consent_type":"express","palette":"dark","language":"pl","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"WDI Training"});
-              });
-            `
-          }}
-        />
-        <noscript>Free cookie consent management tool by <a href="https://www.termsfeed.com/">TermsFeed</a></noscript>
-        <style dangerouslySetInnerHTML={{
-          __html: `
             @font-face {
               font-family: 'roboto-font';
               src: url('/fonts/roboto-font.woff2') format('woff2');
@@ -68,8 +48,9 @@ export default async function RootLayout({
               font-family: 'roboto-font', sans-serif;
               font-weight: 700;
             }
-          `
-        }} />
+          `,
+          }}
+        />
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body className={inter.className}>
@@ -105,6 +86,37 @@ export default async function RootLayout({
             </div>
           </footer>
         </div>
+
+        {gtmId && (
+          <Script
+            id="gtm-init"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+                new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+                j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+                'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+                })(window,document,'script','dataLayer','${gtmId}');
+              `,
+            }}
+          />
+        )}
+
+        {recaptchaSiteKey && (
+          <Script
+            src={`https://www.google.com/recaptcha/api.js?render=${recaptchaSiteKey}`}
+            strategy="lazyOnload"
+          />
+        )}
+
+        <Script
+          id="Cookiebot"
+          src="https://consent.cookiebot.com/uc.js"
+          data-cbid="63bf755d-1878-480f-987f-eb8ee1e30aa7"
+          data-blockingmode="auto"
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

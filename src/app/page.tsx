@@ -1,13 +1,19 @@
 import Link from "next/link";
+import Script from "next/script";
 
 export default function Home() {
   return (
     <>
       <link rel="stylesheet" type="text/css" href="https://cdn.wpcc.io/lib/1.0.2/cookieconsent.min.css"/>
-      <script src="https://cdn.wpcc.io/lib/1.0.2/cookieconsent.min.js" defer></script>
-      <script dangerouslySetInnerHTML={{
-        __html: `
-          window.addEventListener("load", function(){
+      <Script
+        src="https://cdn.wpcc.io/lib/1.0.2/cookieconsent.min.js"
+        strategy="lazyOnload"
+      />
+      <Script
+        id="wpcc-init"
+        strategy="lazyOnload"
+        dangerouslySetInnerHTML={{
+          __html: `
             window.wpcc.init({
               "border":"thin",
               "colors":{
@@ -18,10 +24,10 @@ export default function Home() {
                 "href":"/privacy-policy/",
                 "button":"Continue"
               }
-            })
-          });
-        `
-      }} />
+            });
+          `,
+        }}
+      />
       <div className="container mx-auto px-4 py-16 text-center">
       <h1 className="text-5xl font-bold text-gray-900 mb-6">
         Demo Wydajności Next.js
